@@ -1,0 +1,15 @@
+<div
+  class="dtc-indicator"
+  [class.dtc-indicator--active]="hasDtc()"
+  [matTooltip]="tooltipText()"
+  role="status"
+  [attr.aria-label]="count() + ' fault code' + (count() !== 1 ? 's' : '') + (hasDtc() ? ': ' + tooltipText() : '')"
+>
+  <span class="dtc-icon" aria-hidden="true">&#9889;</span>
+  @if (hasDtc()) {
+    <span class="dtc-count">{{ count() }}</span>
+    <span class="dtc-label">DTC{{ count() !== 1 ? 's' : '' }}</span>
+  } @else {
+    <span class="dtc-label">No DTCs</span>
+  }
+</div>

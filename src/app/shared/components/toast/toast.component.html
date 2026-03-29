@@ -1,0 +1,59 @@
+<div
+  class="toast-container"
+  role="region"
+  aria-label="Notifications"
+  aria-live="polite"
+  aria-atomic="false"
+>
+  @for (toast of visibleToasts(); track toast.id) {
+    <div
+      class="toast"
+      [class.toast--critical]="toast.severity === 'critical'"
+      [class.toast--warning]="toast.severity === 'warning'"
+      [class.toast--info]="toast.severity === 'info'"
+      role="alert"
+      aria-live="assertive"
+      (animationend)="onToastEnter(toast)"
+    >
+      <div class="toast-severity-bar"></div>
+
+      <div class="toast-body">
+        <div class="toast-header">
+          <span class="toast-icon" aria-hidden="true">
+            {{ getSeverityIcon(toast.severity) }}
+          </span>
+          <span class="toast-type">
+            {{ toast.type === 'dtc' ? 'Check Engine' : toast.type === 'battery' ? 'Battery' : toast.type === 'coolant' ? 'Temperature' : 'Connection' }}
+          </span>
+          @if (toast.vehicleName) {
+            <span class="toast-vehicle">· {{ toast.vehicleName }}</span>
+          }
+        </div>
+
+        @if (toast.code) {
+          <span class="toast-code text-mono">{{ toast.code }}</span>
+        }
+
+        <p class="toast-message">{{ toast.message }}</p>
+
+        <span class="toast-time text-xs text-muted">
+          {{ toast.timestamp | date:'HH:mm:ss' }}
+        </span>
+      </div>
+
+      <button
+        class="toast-dismiss"
+        (click)="dismiss(toast.id)"
+        [attr.aria-label]="'Dismiss alert: ' + toast.message"
+      >
+        &#10005;
+      </button>
+    </div>
+  }
+
+  @if (hiddenCount() > 0) {
+    <div class="toast-overflow" role="status">
+      +{{ hiddenCount() }} more alert{{ hiddenCount() !== 1 ? 's' : '' }}
+    </div>
+  }
+</div>

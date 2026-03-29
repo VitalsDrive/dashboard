@@ -1,0 +1,110 @@
+<div class="alerts-page">
+  <div class="alerts-header">
+    <div>
+      <h1 class="page-title">Active Alerts</h1>
+      <p class="text-secondary text-sm">
+        {{ activeAlerts().length }} alert{{ activeAlerts().length !== 1 ? 's' : '' }} requiring attention
+      </p>
+    </div>
+
+    @if (hasAlerts()) {
+      <button
+        mat-stroked-button
+        class="clear-all-btn"
+        (click)="clearAll()"
+        aria-label="Clear all alerts"
+      >
+        <mat-icon>clear_all</mat-icon>
+        Clear All
+      </button>
+    }
+  </div>
+
+  <!-- Filter chips -->
+  <div class="filter-row" role="group" aria-label="Filter alerts by type">
+    @for (filter of filterOptions; track filter.value) {
+      <button
+        class="filter-chip"
+        [class.filter-chip--active]="filterType() === filter.value"
+        (click)="setFilter(filter.value)"
+        [attr.aria-pressed]="filterType() === filter.value"
+        [attr.aria-label]="filter.label + ': ' + filter.count() + ' alerts'"
+      >
+        {{ filter.label }}
+        @if (filter.count() > 0) {
+          <span class="filter-chip-count">{{ filter.count() }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <!-- Alert list -->
+  @if (!hasAlerts()) {
+    <div class="alerts-empty">
+      <span class="alerts-empty-icon" aria-hidden="true">&#9989;</span>
+      <h2>All Clear</h2>
+      <p class="text-secondary">No active alerts. Your fleet is running smoothly.</p>
+    </div>
+  } @else if (filteredAlerts().length === 0) {
+    <div class="alerts-empty-filter">
+      <p class="text-muted">No alerts in this category.</p>
+    </div>
+  } @else {
+    <ul class="alerts-list" role="list" aria-label="Alert list">
+      @for (alert of filteredAlerts(); track alert.id) {
+        <li
+          class="alert-card card"
+          [class.alert-card--critical]="alert.severity === 'critical'"
+          [class.alert-card--warning]="alert.severity === 'warning'"
+          role="listitem"
+        >
+          <div class="alert-card-left">
+            <mat-icon
+              class="alert-card-icon"
+              [class.icon-critical]="alert.severity === 'critical'"
+              [class.icon-warning]="alert.severity === 'warning'"
+              aria-hidden="true"
+            >
+              {{ getSeverityIcon(alert.severity) }}
+            </mat-icon>
+          </div>
+
+          <div class="alert-card-body">
+            <div class="alert-card-header">
+              <span class="alert-type-label">
+                {{ alert.type === 'dtc' ? 'Fault Code' : alert.type === 'battery' ? 'Battery' : alert.type === 'coolant' ? 'Coolant Temp' : 'Connection' }}
+              </span>
+              @if (alert.vehicleName) {
+                <a
+                  [routerLink]="['/vehicle', alert.vehicleId]"
+                  class="alert-vehicle-link"
+                >
+                  {{ alert.vehicleName }}
+                </a>
+              }
+              <span class="alert-time text-xs text-muted">
+                {{ alert.timestamp | date:'MMM d, HH:mm:ss' }}
+              </span>
+            </div>
+
+            @if (alert.code) {
+              <span class="alert-code text-mono">{{ alert.code }}</span>
+            }
+
+            <p class="alert-message">{{ alert.message }}</p>
+          </div>
+
+          <div class="alert-card-actions">
+            <button
+              mat-icon-button
+              (click)="dismiss(alert)"
+              [attr.aria-label]="'Dismiss: ' + alert.message"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

@@ -1,0 +1,48 @@
+<div class="map-page">
+  <div class="map-header">
+    <h1 class="page-title">Fleet Map</h1>
+    <p class="page-subtitle text-secondary text-sm">
+      Live vehicle positions
+    </p>
+  </div>
+
+  <div class="map-layout">
+    <!-- Leaflet map container -->
+    <div
+      id="fleet-map"
+      class="map-container"
+      role="application"
+      aria-label="Fleet map showing vehicle positions"
+    ></div>
+
+    <!-- Detail panel slide-in -->
+    @if (selectedVehicle(); as vehicle) {
+      <app-vehicle-detail-panel
+        [vehicle]="vehicle"
+        (closed)="closeDetailPanel()"
+      />
+    }
+  </div>
+
+  <!-- Map legend -->
+  <div class="map-legend" role="list" aria-label="Map legend">
+    <div class="legend-item" role="listitem">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="8" cy="8" r="5" fill="#22c55e"/>
+      </svg>
+      <span>Running</span>
+    </div>
+    <div class="legend-item" role="listitem">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="8" cy="8" r="5" fill="#ef4444"/>
+      </svg>
+      <span>Alert</span>
+    </div>
+    <div class="legend-item" role="listitem">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="8" cy="8" r="5" fill="#6b7280"/>
+      </svg>
+      <span>Offline</span>
+    </div>
+  </div>
+</div>

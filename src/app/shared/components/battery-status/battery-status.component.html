@@ -1,0 +1,45 @@
+<div class="battery-wrapper" role="region" aria-label="Battery status">
+  <!-- Voltage display -->
+  <div class="voltage-display">
+    @if (latestVoltage() !== null) {
+      <span
+        class="voltage-value"
+        [style.color]="voltageColor()"
+        [attr.aria-label]="'Battery voltage: ' + latestVoltage() + ' volts'"
+      >
+        {{ latestVoltage() | number:'1.1-1' }}
+      </span>
+      <span class="voltage-unit" [style.color]="voltageColor()">V</span>
+
+      <span
+        class="voltage-state-badge badge"
+        [class.badge-critical]="voltageState() === 'critical'"
+        [class.badge-warning]="voltageState() === 'warning'"
+        [class.badge-healthy]="voltageState() === 'normal'"
+      >
+        {{ voltageState() === 'critical' ? 'Critical' : voltageState() === 'warning' ? 'Low' : 'Good' }}
+      </span>
+    } @else {
+      <span class="voltage-value text-muted">--</span>
+      <span class="voltage-unit text-muted">V</span>
+    }
+  </div>
+
+  <!-- Trend chart -->
+  <div class="chart-container" aria-hidden="true">
+    <canvas
+      #voltageCanvas
+      class="voltage-chart"
+      role="img"
+      aria-label="Battery voltage trend"
+    ></canvas>
+  </div>
+
+  <!-- Predictive warning -->
+  @if (showPrediction() && hasPredictiveAlert()) {
+    <div class="predictive-alert" role="alert" aria-live="polite">
+      <span class="predictive-alert-icon">&#9888;</span>
+      <span class="predictive-alert-text">{{ predictiveMessage() }}</span>
+    </div>
+  }
+</div>

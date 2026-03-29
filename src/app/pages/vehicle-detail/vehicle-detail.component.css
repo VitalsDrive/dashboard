@@ -1,0 +1,154 @@
+.vehicle-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.breadcrumb-link {
+  text-decoration: none;
+}
+
+.breadcrumb-link:hover {
+  color: var(--color-text-primary);
+}
+
+.breadcrumb-sep {
+  user-select: none;
+}
+
+/* Hero */
+.detail-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-6);
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.hero-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.status-dot-lg {
+  width: 12px;
+  height: 12px;
+}
+
+.hero-name {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  margin: 0;
+}
+
+.hero-subtitle, .hero-vin {
+  margin: 0;
+}
+
+.hero-gauge {
+  flex-shrink: 0;
+}
+
+/* Tabs */
+.detail-tabs {
+  background: transparent;
+}
+
+::ng-deep .mat-mdc-tab-body-content {
+  padding: 0 !important;
+}
+
+.tab-content {
+  padding-top: var(--space-5);
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--space-1);
+  background: var(--color-warning);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  margin-left: var(--space-2);
+}
+
+/* Telemetry table */
+.section-title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  margin: 0 0 var(--space-4);
+}
+
+.telemetry-raw {
+  display: flex;
+  flex-direction: column;
+}
+
+.telemetry-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.telemetry-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.telemetry-table th,
+.telemetry-table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.telemetry-table th {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  background: var(--color-bg-elevated);
+}
+
+.telemetry-table td {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.telemetry-table tr:hover td {
+  background: var(--color-bg-elevated);
+}
+
+/* Not found */
+.not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-12);
+  text-align: center;
+}

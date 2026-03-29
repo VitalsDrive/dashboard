@@ -1,0 +1,31 @@
+<div class="dashboard">
+  <!-- Page header -->
+  <div class="dashboard-header">
+    <div class="dashboard-header-left">
+      <h1 class="page-title">Fleet Dashboard</h1>
+      <p class="page-subtitle text-secondary text-sm">
+        Real-time vehicle health monitoring
+      </p>
+    </div>
+
+    <div class="dashboard-stats">
+      <div class="stat-chip">
+        <span class="stat-chip-value text-healthy">{{ vehicleCount() }}</span>
+        <span class="stat-chip-label">Online</span>
+      </div>
+      @if (activeAlertCount() > 0) {
+        <div
+          class="stat-chip"
+          [class.stat-chip--critical]="criticalAlertCount() > 0"
+          [class.stat-chip--warning]="criticalAlertCount() === 0"
+        >
+          <span class="stat-chip-value">{{ activeAlertCount() }}</span>
+          <span class="stat-chip-label">Alerts</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Vehicle grid -->
+  <app-vehicle-grid />
+</div>

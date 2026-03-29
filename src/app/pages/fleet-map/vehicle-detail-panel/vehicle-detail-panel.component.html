@@ -1,0 +1,91 @@
+<aside
+  class="detail-panel"
+  role="complementary"
+  [attr.aria-label]="vehicle().name + ' details'"
+>
+  <div class="panel-header">
+    <div class="panel-header-left">
+      <span
+        class="status-dot"
+        [class.status-dot-healthy]="vehicle().status === 'online' && vehicle().alertCount === 0"
+        [class.status-dot-warning]="vehicle().alertCount > 0"
+        [class.status-dot-offline]="vehicle().status === 'offline'"
+        aria-hidden="true"
+      ></span>
+      <h2 class="panel-title">{{ vehicle().name }}</h2>
+    </div>
+    <button
+      mat-icon-button
+      (click)="onClose()"
+      aria-label="Close vehicle details panel"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="panel-body">
+    <!-- Gauges row -->
+    <div class="gauges-row">
+      <app-health-gauge [value]="coolantTemp()" size="medium" [showLabel]="true" />
+
+      <div class="quick-stats">
+        @if (speed() !== null) {
+          <div class="quick-stat">
+            <span class="quick-stat-value">{{ speed() }}</span>
+            <span class="quick-stat-unit text-muted">km/h</span>
+          </div>
+        }
+        @if (rpm() !== null) {
+          <div class="quick-stat">
+            <span class="quick-stat-value">{{ rpm() | number:'1.0-0' }}</span>
+            <span class="quick-stat-unit text-muted">RPM</span>
+          </div>
+        }
+        <div class="quick-stat">
+          <span
+            class="quick-stat-value"
+            [class.text-healthy]="vehicle().healthScore >= 80"
+            [class.text-warning]="vehicle().healthScore >= 50 && vehicle().healthScore < 80"
+            [class.text-critical]="vehicle().healthScore < 50"
+          >
+            {{ vehicle().healthScore }}%
+          </span>
+          <span class="quick-stat-unit text-muted">Health</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Battery -->
+    <div class="section">
+      <h3 class="section-title">Battery</h3>
+      <app-battery-status
+        [vehicleId]="vehicle().id"
+        [history]="history()"
+        [showPrediction]="true"
+      />
+    </div>
+
+    <!-- DTCs -->
+    @if (vehicle().latestTelemetry?.dtc_codes?.length) {
+      <div class="section">
+        <h3 class="section-title text-warning">Active DTCs</h3>
+        <ul class="dtc-list-mini">
+          @for (code of vehicle().latestTelemetry!.dtc_codes; track code) {
+            <li class="dtc-item-mini text-mono">{{ code }}</li>
+          }
+        </ul>
+      </div>
+    }
+  </div>
+
+  <div class="panel-footer">
+    <a
+      [routerLink]="['/vehicle', vehicle().id]"
+      mat-stroked-button
+      class="full-details-btn"
+    >
+      Full Details
+      <mat-icon>arrow_forward</mat-icon>
+    </a>
+  </div>
+</aside>

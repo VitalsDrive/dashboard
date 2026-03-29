@@ -1,0 +1,71 @@
+<div class="login-page" role="main">
+  <div class="login-card">
+    <!-- Brand -->
+    <div class="login-brand">
+      <span class="brand-icon" aria-hidden="true">&#9685;</span>
+      <h1 class="brand-name">VitalsDrive</h1>
+      <p class="brand-tagline text-secondary text-sm">Fleet Health, Simplified.</p>
+    </div>
+
+    <!-- Form -->
+    <form
+      class="login-form"
+      (ngSubmit)="onSubmit()"
+      novalidate
+      aria-label="Login form"
+    >
+      <mat-form-field appearance="outline" class="login-field">
+        <mat-label>Email</mat-label>
+        <input
+          matInput
+          type="email"
+          name="email"
+          [(ngModel)]="email"
+          autocomplete="email"
+          required
+          aria-required="true"
+          placeholder="fleet@example.com"
+        />
+        <mat-icon matPrefix aria-hidden="true">mail_outline</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="login-field">
+        <mat-label>Password</mat-label>
+        <input
+          matInput
+          [type]="showPassword ? 'text' : 'password'"
+          name="password"
+          [(ngModel)]="password"
+          autocomplete="current-password"
+          required
+          aria-required="true"
+        />
+        <mat-icon matPrefix aria-hidden="true">lock_outline</mat-icon>
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          (click)="togglePassword()"
+          [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+          [attr.aria-pressed]="showPassword"
+        >
+          <mat-icon>{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <button
+        mat-raised-button
+        color="primary"
+        type="submit"
+        class="login-btn"
+        aria-label="Sign in to VitalsDrive"
+      >
+        Sign In
+      </button>
+    </form>
+
+    <p class="login-note text-muted text-xs">
+      Authentication is stubbed for MVP development.
+    </p>
+  </div>
+</div>

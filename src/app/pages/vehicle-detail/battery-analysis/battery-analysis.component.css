@@ -1,0 +1,96 @@
+.battery-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.section-title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  margin: 0 0 var(--space-2);
+}
+
+.battery-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+@media (max-width: 768px) {
+  .battery-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.battery-status-card .card-body {
+  padding: var(--space-5);
+}
+
+/* Stats grid */
+.battery-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.stat-card {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: center;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+/* Voltage guide */
+.voltage-guide {
+  padding: var(--space-5);
+}
+
+.guide-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 var(--space-3);
+}
+
+.guide-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.guide-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.guide-range {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.guide-desc {
+  color: var(--color-text-muted);
+}

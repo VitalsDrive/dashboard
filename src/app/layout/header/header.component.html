@@ -1,0 +1,67 @@
+<header class="header" role="banner">
+  <div class="header-left">
+    <button
+      mat-icon-button
+      class="menu-toggle"
+      (click)="onMenuToggle()"
+      [attr.aria-label]="sidenavOpen() ? 'Close menu' : 'Open menu'"
+      [attr.aria-expanded]="sidenavOpen()"
+    >
+      <mat-icon>{{ sidenavOpen() ? 'menu_open' : 'menu' }}</mat-icon>
+    </button>
+
+    <a routerLink="/dashboard" class="brand" aria-label="VitalsDrive Home">
+      <span class="brand-icon">&#9685;</span>
+      <span class="brand-name">VitalsDrive</span>
+    </a>
+  </div>
+
+  <div class="header-right">
+    <!-- Connection status -->
+    <div
+      class="connection-status"
+      [class.connected]="connectionStatus() === 'connected'"
+      [class.disconnected]="connectionStatus() === 'disconnected'"
+      [class.reconnecting]="connectionStatus() === 'reconnecting'"
+      [matTooltip]="'Realtime: ' + connectionStatus()"
+      role="status"
+      [attr.aria-label]="'Connection status: ' + connectionStatus()"
+    >
+      <span class="connection-dot"></span>
+      @if (!isMobile()) {
+        <span class="connection-label">{{ connectionStatus() }}</span>
+      }
+    </div>
+
+    <!-- Alerts button -->
+    <a
+      routerLink="/alerts"
+      mat-icon-button
+      class="alert-btn"
+      [attr.aria-label]="activeAlertCount() + ' active alerts'"
+      matTooltip="Active Alerts"
+    >
+      @if (criticalAlertCount() > 0) {
+        <mat-icon
+          [matBadge]="criticalAlertCount()"
+          matBadgeColor="warn"
+          matBadgeSize="small"
+          aria-hidden="true"
+        >
+          notifications_active
+        </mat-icon>
+      } @else if (activeAlertCount() > 0) {
+        <mat-icon
+          [matBadge]="activeAlertCount()"
+          matBadgeColor="accent"
+          matBadgeSize="small"
+          aria-hidden="true"
+        >
+          notifications
+        </mat-icon>
+      } @else {
+        <mat-icon aria-hidden="true">notifications_none</mat-icon>
+      }
+    </a>
+  </div>
+</header>

@@ -1,0 +1,81 @@
+<section class="battery-analysis" aria-label="Battery analysis">
+  <h2 class="section-title">Battery Analysis</h2>
+
+  <div class="battery-layout">
+    <!-- Current status -->
+    <div class="card battery-status-card">
+      <div class="card-body">
+        <app-battery-status
+          [vehicleId]="vehicleId()"
+          [history]="history()"
+          [showPrediction]="true"
+        />
+      </div>
+    </div>
+
+    <!-- Stats grid -->
+    <div class="battery-stats">
+      <div class="stat-card card">
+        <span class="stat-label">Current</span>
+        <span
+          class="stat-value"
+          [style.color]="voltageColor()"
+        >
+          {{ currentVoltage() !== null ? (currentVoltage()! | number:'1.1-1') + 'V' : '--' }}
+        </span>
+      </div>
+
+      <div class="stat-card card">
+        <span class="stat-label">Min (24h)</span>
+        <span class="stat-value" [class.text-warning]="minVoltage() !== null && minVoltage()! < 12.4">
+          {{ minVoltage() !== null ? (minVoltage()! | number:'1.1-1') + 'V' : '--' }}
+        </span>
+      </div>
+
+      <div class="stat-card card">
+        <span class="stat-label">Max (24h)</span>
+        <span class="stat-value text-healthy">
+          {{ maxVoltage() !== null ? (maxVoltage()! | number:'1.1-1') + 'V' : '--' }}
+        </span>
+      </div>
+
+      <div class="stat-card card">
+        <span class="stat-label">Average</span>
+        <span
+          class="stat-value"
+          [class.text-warning]="avgVoltage() !== null && avgVoltage()! < 12.4"
+          [class.text-healthy]="avgVoltage() !== null && avgVoltage()! >= 12.4"
+        >
+          {{ avgVoltage() !== null ? (avgVoltage()! | number:'1.1-1') + 'V' : '--' }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Voltage guide -->
+  <div class="voltage-guide card">
+    <h3 class="guide-title">Voltage Reference</h3>
+    <div class="guide-rows">
+      <div class="guide-row">
+        <span class="guide-range text-healthy">13.5 – 14.7V</span>
+        <span class="guide-desc">Engine running, alternator charging</span>
+      </div>
+      <div class="guide-row">
+        <span class="guide-range">12.6 – 13.5V</span>
+        <span class="guide-desc">Engine off, fully charged</span>
+      </div>
+      <div class="guide-row">
+        <span class="guide-range text-warning">12.4 – 12.6V</span>
+        <span class="guide-desc">75% charged, monitor closely</span>
+      </div>
+      <div class="guide-row">
+        <span class="guide-range text-warning">12.0 – 12.4V</span>
+        <span class="guide-desc">50% charged — low battery warning</span>
+      </div>
+      <div class="guide-row">
+        <span class="guide-range text-critical">&lt; 12.0V</span>
+        <span class="guide-desc">Critical — may not start</span>
+      </div>
+    </div>
+  </div>
+</section>

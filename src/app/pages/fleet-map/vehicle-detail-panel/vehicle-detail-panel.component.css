@@ -1,0 +1,142 @@
+.detail-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 360px;
+  background: var(--color-bg-surface);
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-elevated);
+  display: flex;
+  flex-direction: column;
+  z-index: var(--z-raised);
+  animation: slide-in-right var(--transition-base);
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.panel-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.panel-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin: 0;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Gauges row */
+.gauges-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.quick-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.quick-stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.quick-stat-value {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.quick-stat-unit {
+  font-size: var(--font-size-sm);
+}
+
+/* Sections */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.section-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* DTC mini list */
+.dtc-list-mini {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.dtc-item-mini {
+  padding: 2px var(--space-2);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+/* Footer */
+.panel-footer {
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.full-details-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  text-decoration: none;
+}
+
+/* Mobile: full-width bottom sheet */
+@media (max-width: 768px) {
+  .detail-panel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 60vh;
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    animation: slide-in-top var(--transition-base);
+  }
+}

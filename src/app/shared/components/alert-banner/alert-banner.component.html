@@ -1,0 +1,73 @@
+@if (activeAlertCount() > 0) {
+  <div
+    class="alert-banner"
+    [class.alert-banner--critical]="hasCritical()"
+    [class.alert-banner--expanded]="isExpanded()"
+    role="complementary"
+    aria-label="Fleet alerts"
+  >
+    <!-- Collapsed / Top alert row -->
+    <div class="alert-banner-row" (click)="toggleExpand()">
+      <div class="alert-banner-left">
+        <mat-icon class="alert-banner-icon" aria-hidden="true">
+          {{ hasCritical() ? 'error' : 'warning' }}
+        </mat-icon>
+
+        @if (topAlert(); as alert) {
+          <span class="alert-banner-message">{{ alert.message }}</span>
+        }
+      </div>
+
+      <div class="alert-banner-right">
+        <span class="alert-banner-count">
+          {{ activeAlertCount() }} alert{{ activeAlertCount() !== 1 ? 's' : '' }}
+        </span>
+
+        <a
+          routerLink="/alerts"
+          class="alert-banner-link"
+          (click)="$event.stopPropagation()"
+        >
+          View all
+        </a>
+
+        <button
+          mat-icon-button
+          class="alert-banner-expand"
+          [attr.aria-label]="isExpanded() ? 'Collapse alerts' : 'Expand alerts'"
+          [attr.aria-expanded]="isExpanded()"
+          (click)="$event.stopPropagation(); toggleExpand()"
+        >
+          <mat-icon>{{ isExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Expanded alert list -->
+    @if (isExpanded()) {
+      <ul class="alert-banner-list" role="list" aria-label="Active alerts list">
+        @for (alert of activeAlerts(); track alert.id) {
+          <li
+            class="alert-banner-item"
+            [class.alert-banner-item--critical]="alert.severity === 'critical'"
+            [class.alert-banner-item--warning]="alert.severity === 'warning'"
+          >
+            <span class="alert-item-vehicle text-xs text-muted">{{ alert.vehicleName ?? alert.vehicleId }}</span>
+            @if (alert.code) {
+              <span class="alert-item-code text-mono">{{ alert.code }}</span>
+            }
+            <span class="alert-item-message">{{ alert.message }}</span>
+            <button
+              mat-icon-button
+              class="alert-item-dismiss"
+              (click)="dismiss(alert.id, $event)"
+              [attr.aria-label]="'Dismiss: ' + alert.message"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+}

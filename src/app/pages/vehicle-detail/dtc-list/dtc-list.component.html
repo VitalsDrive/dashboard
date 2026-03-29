@@ -1,0 +1,77 @@
+<section class="dtc-list" aria-label="Active fault codes">
+  <div class="section-header">
+    <h2 class="section-title">Fault Codes (DTC)</h2>
+    @if (!hasDtcs()) {
+      <span class="badge badge-healthy">No active codes</span>
+    }
+  </div>
+
+  @if (hasDtcs()) {
+    <ul class="dtc-items" role="list">
+      @for (item of entries(); track item.code) {
+        <li class="dtc-item card" role="listitem">
+          <div class="dtc-item-header">
+            <div class="dtc-item-title-row">
+              <span
+                class="dtc-code text-mono"
+                [style.color]="item.color"
+              >
+                {{ item.code }}
+              </span>
+              <span
+                class="badge"
+                [class.badge-critical]="item.entry.severity === 'critical' || item.entry.severity === 'high'"
+                [class.badge-warning]="item.entry.severity === 'medium'"
+                [class.badge-healthy]="item.entry.severity === 'low'"
+              >
+                {{ item.entry.severity }}
+              </span>
+            </div>
+
+            <button
+              mat-icon-button
+              class="dtc-dismiss"
+              (click)="dismissCode(item.code)"
+              [attr.aria-label]="'Dismiss alert for ' + item.code"
+              matTooltip="Dismiss alert"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <h3 class="dtc-description">{{ item.entry.description }}</h3>
+
+          <div class="dtc-details">
+            <div class="dtc-section">
+              <h4 class="dtc-section-title">Common Causes</h4>
+              <ul class="dtc-detail-list">
+                @for (cause of item.entry.causes; track cause) {
+                  <li>{{ cause }}</li>
+                }
+              </ul>
+            </div>
+
+            <div class="dtc-section">
+              <h4 class="dtc-section-title">What You May Notice</h4>
+              <ul class="dtc-detail-list">
+                @for (symptom of item.entry.symptoms; track symptom) {
+                  <li>{{ symptom }}</li>
+                }
+              </ul>
+            </div>
+
+            <div class="dtc-recommendation">
+              <mat-icon class="recommendation-icon" aria-hidden="true">build</mat-icon>
+              <p>{{ item.entry.recommendations }}</p>
+            </div>
+          </div>
+        </li>
+      }
+    </ul>
+  } @else {
+    <div class="dtc-empty">
+      <span class="dtc-empty-icon" aria-hidden="true">&#9989;</span>
+      <p>No active fault codes — engine is reporting clean.</p>
+    </div>
+  }
+</section>

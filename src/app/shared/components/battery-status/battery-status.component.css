@@ -1,0 +1,69 @@
+.battery-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Voltage display */
+.voltage-display {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.voltage-value {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: color var(--transition-base);
+}
+
+.voltage-unit {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  transition: color var(--transition-base);
+}
+
+.voltage-state-badge {
+  align-self: center;
+  margin-left: var(--space-1);
+}
+
+/* Chart */
+.chart-container {
+  width: 100%;
+  height: 60px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.voltage-chart {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Predictive alert banner */
+.predictive-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-warning-bg);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-warning);
+  animation: slide-in-top var(--transition-base);
+}
+
+.predictive-alert-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.predictive-alert-text {
+  font-weight: 500;
+}

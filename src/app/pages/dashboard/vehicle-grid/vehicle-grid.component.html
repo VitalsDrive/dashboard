@@ -1,0 +1,29 @@
+@if (isLoading()) {
+  <app-loading-spinner message="Loading fleet..." [fullPage]="true" />
+} @else if (error()) {
+  <div class="grid-error" role="alert">
+    <span class="grid-error-icon">&#9888;</span>
+    <p>Failed to load fleet: {{ error() }}</p>
+  </div>
+} @else if (vehicles().length === 0) {
+  <div class="grid-empty">
+    <span class="grid-empty-icon" aria-hidden="true">&#128665;</span>
+    <h3>No vehicles found</h3>
+    <p class="text-secondary">Add vehicles to your fleet to start monitoring.</p>
+  </div>
+} @else {
+  <div
+    class="vehicle-grid"
+    role="list"
+    [attr.aria-label]="'Fleet — ' + vehicles().length + ' vehicle' + (vehicles().length !== 1 ? 's' : '')"
+  >
+    @for (vehicle of vehicles(); track vehicle.id) {
+      <div role="listitem">
+        <app-vehicle-card
+          [vehicle]="vehicle"
+          (clicked)="onVehicleSelected($event)"
+        />
+      </div>
+    }
+  </div>
+}

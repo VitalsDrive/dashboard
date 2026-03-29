@@ -1,0 +1,137 @@
+@if (isLoading()) {
+  <app-loading-spinner message="Loading vehicle..." [fullPage]="true" />
+} @else if (!vehicle()) {
+  <div class="not-found">
+    <h2>Vehicle not found</h2>
+    <p class="text-secondary">The vehicle you're looking for doesn't exist or has been removed.</p>
+    <a routerLink="/dashboard" mat-stroked-button>
+      <mat-icon>arrow_back</mat-icon>
+      Back to Dashboard
+    </a>
+  </div>
+} @else {
+  <div class="vehicle-detail">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a routerLink="/dashboard" class="breadcrumb-link text-secondary text-sm">
+        Fleet Dashboard
+      </a>
+      <span class="breadcrumb-sep text-muted" aria-hidden="true">/</span>
+      <span class="breadcrumb-current text-sm">{{ vehicle()!.name }}</span>
+    </nav>
+
+    <!-- Hero header -->
+    <div class="detail-hero card">
+      <div class="hero-main">
+        <div class="hero-title-row">
+          <span
+            class="status-dot status-dot-lg"
+            [class.status-dot-healthy]="vehicle()!.status === 'online' && vehicle()!.alertCount === 0"
+            [class.status-dot-warning]="vehicle()!.alertCount > 0"
+            [class.status-dot-offline]="vehicle()!.status === 'offline'"
+            [class.pulse]="vehicle()!.latestTelemetry?.engine_on"
+            aria-hidden="true"
+          ></span>
+          <h1 class="hero-name">{{ vehicle()!.name }}</h1>
+          <span
+            class="badge"
+            [class.badge-healthy]="vehicle()!.healthScore >= 80"
+            [class.badge-warning]="vehicle()!.healthScore >= 50 && vehicle()!.healthScore < 80"
+            [class.badge-critical]="vehicle()!.healthScore < 50"
+          >
+            {{ vehicle()!.healthScore }}% Health
+          </span>
+        </div>
+
+        @if (vehicle()!.make || vehicle()!.model || vehicle()!.year) {
+          <p class="hero-subtitle text-secondary">
+            {{ vehicle()!.year }} {{ vehicle()!.make }} {{ vehicle()!.model }}
+          </p>
+        }
+
+        @if (vehicle()!.vin) {
+          <p class="hero-vin text-mono text-xs text-muted">VIN: {{ vehicle()!.vin }}</p>
+        }
+      </div>
+
+      <div class="hero-gauge">
+        <app-health-gauge
+          [value]="coolantTemp()"
+          size="large"
+          [showLabel]="true"
+        />
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <mat-tab-group class="detail-tabs" animationDuration="200ms">
+      <mat-tab label="Battery">
+        <div class="tab-content">
+          <app-battery-analysis
+            [vehicleId]="vehicleId()"
+            [history]="history()"
+          />
+        </div>
+      </mat-tab>
+
+      <mat-tab>
+        <ng-template mat-tab-label>
+          Fault Codes
+          @if (dtcCodes().length > 0) {
+            <span class="tab-badge">{{ dtcCodes().length }}</span>
+          }
+        </ng-template>
+        <div class="tab-content">
+          <app-dtc-list
+            [vehicleId]="vehicleId()"
+            [dtcCodes]="dtcCodes()"
+          />
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Telemetry">
+        <div class="tab-content">
+          <div class="telemetry-raw">
+            <h2 class="section-title">Recent Telemetry</h2>
+            @if (history().length > 0) {
+              <div class="telemetry-table-wrapper">
+                <table class="telemetry-table" role="table" aria-label="Recent telemetry data">
+                  <thead>
+                    <tr>
+                      <th scope="col">Time</th>
+                      <th scope="col">Temp °C</th>
+                      <th scope="col">Voltage V</th>
+                      <th scope="col">Speed</th>
+                      <th scope="col">RPM</th>
+                      <th scope="col">Engine</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (record of history().slice(0, 50); track record.timestamp) {
+                      <tr>
+                        <td class="text-mono text-sm">{{ record.timestamp | date:'HH:mm:ss' }}</td>
+                        <td [class.text-critical]="record.coolant_temp > 105" [class.text-warning]="record.coolant_temp > 100 && record.coolant_temp <= 105">
+                          {{ record.coolant_temp }}
+                        </td>
+                        <td [class.text-critical]="record.voltage < 12.0" [class.text-warning]="record.voltage < 12.4 && record.voltage >= 12.0">
+                          {{ record.voltage | number:'1.1-1' }}
+                        </td>
+                        <td>{{ record.speed ?? '--' }}</td>
+                        <td>{{ record.rpm ?? '--' }}</td>
+                        <td [class.text-healthy]="record.engine_on" [class.text-muted]="!record.engine_on">
+                          {{ record.engine_on ? 'ON' : 'OFF' }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <p class="text-secondary">No telemetry data available yet.</p>
+            }
+          </div>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+}

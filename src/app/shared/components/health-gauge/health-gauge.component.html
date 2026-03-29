@@ -1,0 +1,80 @@
+<div
+  class="gauge-wrapper"
+  [class.gauge--small]="size() === 'small'"
+  [class.gauge--medium]="size() === 'medium'"
+  [class.gauge--large]="size() === 'large'"
+  [class.gauge--critical]="isCritical()"
+  role="meter"
+  [attr.aria-valuenow]="value()"
+  aria-valuemin="0"
+  aria-valuemax="130"
+  [attr.aria-valuetext]="value() + ' degrees Celsius — ' + state()"
+  aria-label="Coolant temperature gauge"
+>
+  <svg
+    [attr.width]="dim().width"
+    [attr.height]="dim().height"
+    [attr.viewBox]="'0 0 ' + dim().width + ' ' + dim().height"
+    aria-hidden="true"
+    class="gauge-svg"
+  >
+    <!-- Background track -->
+    <path
+      [attr.d]="bgPath()"
+      fill="none"
+      stroke="var(--color-border)"
+      [attr.stroke-width]="dim().strokeWidth"
+      stroke-linecap="round"
+    />
+
+    <!-- Value arc -->
+    @if (valuePath()) {
+      <path
+        class="gauge-value-arc"
+        [attr.d]="valuePath()"
+        fill="none"
+        [attr.stroke]="gaugeColor()"
+        [attr.stroke-width]="dim().strokeWidth"
+        stroke-linecap="round"
+      />
+    }
+
+    <!-- Center value text -->
+    <text
+      [attr.x]="dim().cx"
+      [attr.y]="dim().cy - dim().r * 0.15"
+      text-anchor="middle"
+      dominant-baseline="middle"
+      class="gauge-value-text"
+      [attr.font-size]="dim().fontSize"
+      [attr.fill]="gaugeColor()"
+    >
+      {{ clampedValue() | number:'1.0-0' }}
+    </text>
+
+    <!-- Unit label -->
+    <text
+      [attr.x]="dim().cx"
+      [attr.y]="dim().cy - dim().r * 0.15 + dim().fontSize * 0.9"
+      text-anchor="middle"
+      dominant-baseline="middle"
+      class="gauge-unit-text"
+      [attr.font-size]="dim().fontSize * 0.5"
+      fill="var(--color-text-secondary)"
+    >
+      °C
+    </text>
+  </svg>
+
+  @if (showLabel()) {
+    <span class="gauge-label" [class]="'text-' + (state() === 'normal' ? 'secondary' : state() === 'warning' ? 'warning' : 'critical')">
+      @if (state() === 'critical') {
+        Overheating!
+      } @else if (state() === 'warning') {
+        Running Hot
+      } @else {
+        Coolant Temp
+      }
+    </span>
+  }
+</div>

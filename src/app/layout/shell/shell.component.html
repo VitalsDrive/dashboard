@@ -1,0 +1,29 @@
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<mat-sidenav-container class="shell-container">
+  <mat-sidenav
+    class="shell-sidenav"
+    [mode]="isMobile() ? 'over' : 'side'"
+    [opened]="sidenavOpen()"
+    [fixedInViewport]="true"
+    [fixedTopGap]="0"
+  >
+    <app-sidebar (navItemClicked)="isMobile() && toggleSidenav()" />
+  </mat-sidenav>
+
+  <mat-sidenav-content class="shell-content">
+    <app-header
+      [isMobile]="isMobile()"
+      [sidenavOpen]="sidenavOpen()"
+      (menuToggled)="toggleSidenav()"
+    />
+
+    <app-alert-banner />
+
+    <main id="main-content" class="shell-main">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
+
+<app-toast />

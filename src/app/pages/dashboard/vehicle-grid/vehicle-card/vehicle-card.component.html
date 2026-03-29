@@ -1,0 +1,69 @@
+<article
+  class="vehicle-card"
+  [class]="cardBorderClass()"
+  [routerLink]="['/vehicle', vehicle().id]"
+  tabindex="0"
+  (keydown.enter)="onCardClick()"
+  [attr.aria-label]="vehicle().name + ' — Health: ' + vehicle().healthScore + '%' + (vehicle().alertCount > 0 ? ', ' + vehicle().alertCount + ' alerts' : '')"
+  role="article"
+>
+  <!-- Card Header -->
+  <div class="card-header">
+    <div class="card-header-left">
+      <span
+        class="status-dot"
+        [class.status-dot-healthy]="vehicle().status === 'online' && vehicle().alertCount === 0"
+        [class.status-dot-warning]="vehicle().alertCount > 0 && vehicle().healthScore >= 50"
+        [class.status-dot-critical]="vehicle().healthScore < 50"
+        [class.status-dot-offline]="vehicle().status === 'offline'"
+        [class.pulse]="engineOn() && vehicle().status === 'online'"
+        aria-hidden="true"
+      ></span>
+      <h3 class="vehicle-name truncate">{{ vehicle().name }}</h3>
+    </div>
+
+    <div class="card-header-right">
+      <span
+        class="health-score"
+        [class.text-healthy]="vehicle().healthScore >= 80"
+        [class.text-warning]="vehicle().healthScore >= 50 && vehicle().healthScore < 80"
+        [class.text-critical]="vehicle().healthScore < 50"
+        [attr.aria-label]="'Health score: ' + vehicle().healthScore + '%'"
+      >
+        {{ vehicle().healthScore }}%
+      </span>
+    </div>
+  </div>
+
+  <!-- Card Body -->
+  <div class="card-body">
+    <div class="gauge-section">
+      <app-health-gauge
+        [value]="coolantTemp()"
+        size="small"
+        [showLabel]="true"
+      />
+    </div>
+
+    <div class="battery-section">
+      <app-battery-status
+        [vehicleId]="vehicle().id"
+        [history]="telemetryHistory()"
+        [showPrediction]="true"
+      />
+    </div>
+  </div>
+
+  <!-- Card Footer -->
+  <div class="card-footer">
+    <app-dtc-indicator [dtcCodes]="dtcCodes()" />
+
+    <span class="last-seen text-xs text-muted">
+      @if (lastSeen()) {
+        {{ lastSeen() | date:'HH:mm:ss' }}
+      } @else {
+        No data
+      }
+    </span>
+  </div>
+</article>

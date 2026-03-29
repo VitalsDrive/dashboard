@@ -1,0 +1,116 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-height);
+  padding: 0 var(--space-4);
+  background: var(--color-bg-header);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  flex-shrink: 0;
+}
+
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Brand */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: var(--font-size-md);
+  letter-spacing: -0.01em;
+}
+
+.brand-icon {
+  font-size: 20px;
+  color: var(--color-brand);
+}
+
+.brand-name {
+  color: var(--color-text-primary);
+}
+
+/* Menu toggle */
+.menu-toggle {
+  color: var(--color-text-secondary) !important;
+}
+
+.menu-toggle:hover {
+  color: var(--color-text-primary) !important;
+}
+
+/* Connection status */
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all var(--transition-base);
+}
+
+.connection-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.connection-status.connected {
+  background: var(--color-healthy-bg);
+  border-color: rgba(34, 197, 94, 0.2);
+  color: var(--color-healthy);
+}
+
+.connection-status.connected .connection-dot {
+  background: var(--color-healthy);
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+.connection-status.disconnected {
+  background: var(--color-critical-bg);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: var(--color-critical);
+}
+
+.connection-status.disconnected .connection-dot {
+  background: var(--color-critical);
+}
+
+.connection-status.reconnecting {
+  background: var(--color-warning-bg);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: var(--color-warning);
+}
+
+.connection-status.reconnecting .connection-dot {
+  background: var(--color-warning);
+  animation: pulse-ring 1s ease-in-out infinite;
+}
+
+.connection-label {
+  text-transform: capitalize;
+}
+
+/* Alert button */
+.alert-btn {
+  color: var(--color-text-secondary) !important;
+  text-decoration: none;
+}
+
+.alert-btn:hover {
+  color: var(--color-text-primary) !important;
+}
