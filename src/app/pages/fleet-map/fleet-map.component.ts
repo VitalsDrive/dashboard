@@ -11,7 +11,7 @@ import {
 import * as L from 'leaflet';
 import { VehicleService } from '../../core/services/vehicle.service';
 import { AlertService } from '../../core/services/alert.service';
-import { VehicleWithHealth } from '../../core/models/vehicle.model';
+import { VehicleWithHealth, getVehicleDisplayName } from '../../core/models/vehicle.model';
 import { VehicleDetailPanelComponent } from './vehicle-detail-panel/vehicle-detail-panel.component';
 
 // Fix Leaflet default marker icon path issue with bundlers
@@ -115,8 +115,8 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
       } else {
         const marker = L.marker([lat, lng], {
           icon: this.getMarkerIcon(vehicle),
-          title: vehicle.name,
-          alt: vehicle.name,
+          title: getVehicleDisplayName(vehicle),
+          alt: getVehicleDisplayName(vehicle),
         });
 
         marker.bindPopup(this.buildPopupContent(vehicle), {
@@ -178,7 +178,7 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
   }
 
   private getVehicleState(vehicle: VehicleWithHealth): 'offline' | 'running' | 'alert' {
-    if (vehicle.status === 'offline') return 'offline';
+    if (vehicle.status === 'inactive') return 'offline';
     if (vehicle.alertCount > 0) return 'alert';
     if (vehicle.latestTelemetry?.engine_on) return 'running';
     return 'offline';
@@ -189,7 +189,7 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
     const volt = vehicle.latestTelemetry?.voltage ?? '--';
     return `
       <div style="font-family: var(--font-family); color: #e2e8f0; padding: 4px 0;">
-        <strong style="font-size: 14px;">${vehicle.name}</strong>
+        <strong style="font-size: 14px;">${getVehicleDisplayName(vehicle)}</strong>
         <div style="margin-top: 6px; font-size: 12px; color: #9ca3af;">
           <div>Temp: ${temp}°C</div>
           <div>Voltage: ${volt}V</div>

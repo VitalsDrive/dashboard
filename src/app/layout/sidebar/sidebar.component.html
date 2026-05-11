@@ -55,8 +55,28 @@
     }
   </ul>
 
-  <!-- Footer -->
-  <div class="sidebar-footer">
-    <span class="sidebar-version text-muted text-xs">v1.0.0</span>
-  </div>
+  <!-- Footer with user menu -->
+  @if (currentUser()) {
+    <div class="sidebar-footer">
+      <div class="user-section">
+        <div class="user-info">
+          <mat-icon class="user-icon">account_circle</mat-icon>
+          <div class="user-details">
+            <span class="user-email">{{ currentUser()?.email }}</span>
+            @if (selectedOrganization()) {
+              <span class="user-org">{{ selectedOrganization()?.name }}</span>
+            }
+          </div>
+        </div>
+        <button
+          mat-icon-button
+          class="logout-btn"
+          (click)="onLogout()"
+          aria-label="Sign out"
+        >
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+    </div>
+  }
 </nav>

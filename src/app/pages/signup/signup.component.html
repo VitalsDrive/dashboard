@@ -1,12 +1,10 @@
-<div class="login-page" role="main">
-  <div class="login-card">
+<div class="signup-page" role="main">
+  <div class="signup-card">
     <!-- Brand -->
-    <div class="login-brand">
+    <div class="signup-brand">
       <span class="brand-icon" aria-hidden="true">&#9685;</span>
       <h1 class="brand-name">VitalsDrive</h1>
-      <p class="brand-tagline text-secondary text-sm">
-        Fleet Health, Simplified.
-      </p>
+      <p class="brand-tagline text-secondary text-sm">Start your fleet management journey</p>
     </div>
 
     <!-- Error Display -->
@@ -19,29 +17,29 @@
 
     <!-- Form -->
     <form
-      class="login-form"
+      class="signup-form"
       (ngSubmit)="onSubmit()"
       novalidate
-      aria-label="Login form"
+      aria-label="Sign up form"
     >
       <button
         mat-raised-button
         color="primary"
         type="submit"
-        class="login-btn"
+        class="signup-btn"
         [disabled]="isLoading()"
-        aria-label="Sign in with Auth0"
+        aria-label="Create account with Auth0"
       >
         @if (isLoading()) {
-          Signing in...
+          Creating account...
         } @else {
-          Sign In with Auth0
+          Sign Up with Auth0
         }
       </button>
     </form>
 
-    <p class="login-footer text-secondary text-sm">
-      Don't have an account? <a routerLink="/signup">Create one</a>
+    <p class="signup-footer text-secondary text-sm">
+      Already have an account? <a routerLink="/login">Sign in</a>
     </p>
   </div>
 </div>

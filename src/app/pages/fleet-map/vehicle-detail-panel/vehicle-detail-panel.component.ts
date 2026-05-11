@@ -10,10 +10,11 @@ import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { VehicleWithHealth } from '../../../core/models/vehicle.model';
+import { VehicleWithHealth, getVehicleDisplayName } from '../../../core/models/vehicle.model';
 import { HealthGaugeComponent } from '../../../shared/components/health-gauge/health-gauge.component';
 import { BatteryStatusComponent } from '../../../shared/components/battery-status/battery-status.component';
 import { VehicleService } from '../../../core/services/vehicle.service';
+import { VehicleInfoComponent } from '../../../shared/components/vehicle-info/vehicle-info.component';
 
 @Component({
   selector: 'app-vehicle-detail-panel',
@@ -27,6 +28,7 @@ import { VehicleService } from '../../../core/services/vehicle.service';
     MatIconModule,
     HealthGaugeComponent,
     BatteryStatusComponent,
+    VehicleInfoComponent,
   ],
 })
 export class VehicleDetailPanelComponent {
@@ -34,6 +36,8 @@ export class VehicleDetailPanelComponent {
 
   readonly vehicle = input.required<VehicleWithHealth>();
   readonly closed = output<void>();
+
+  protected readonly displayName = getVehicleDisplayName;
 
   readonly history = computed(() => {
     const map = this.vehicleService.telemetryMap();

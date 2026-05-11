@@ -4,7 +4,7 @@
   [routerLink]="['/vehicle', vehicle().id]"
   tabindex="0"
   (keydown.enter)="onCardClick()"
-  [attr.aria-label]="vehicle().name + ' — Health: ' + vehicle().healthScore + '%' + (vehicle().alertCount > 0 ? ', ' + vehicle().alertCount + ' alerts' : '')"
+  [attr.aria-label]="displayName(vehicle()) + ' — Health: ' + vehicle().healthScore + '%' + (vehicle().alertCount > 0 ? ', ' + vehicle().alertCount + ' alerts' : '')"
   role="article"
 >
   <!-- Card Header -->
@@ -12,14 +12,14 @@
     <div class="card-header-left">
       <span
         class="status-dot"
-        [class.status-dot-healthy]="vehicle().status === 'online' && vehicle().alertCount === 0"
+        [class.status-dot-healthy]="vehicle().status === 'active' && vehicle().alertCount === 0"
         [class.status-dot-warning]="vehicle().alertCount > 0 && vehicle().healthScore >= 50"
         [class.status-dot-critical]="vehicle().healthScore < 50"
-        [class.status-dot-offline]="vehicle().status === 'offline'"
-        [class.pulse]="engineOn() && vehicle().status === 'online'"
+        [class.status-dot-offline]="vehicle().status === 'inactive'"
+        [class.pulse]="engineOn() && vehicle().status === 'active'"
         aria-hidden="true"
       ></span>
-      <h3 class="vehicle-name truncate">{{ vehicle().name }}</h3>
+      <h3 class="vehicle-name truncate">{{ displayName(vehicle()) }}</h3>
     </div>
 
     <div class="card-header-right">

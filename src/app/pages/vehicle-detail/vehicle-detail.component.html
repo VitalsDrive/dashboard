@@ -17,30 +17,16 @@
         Fleet Dashboard
       </a>
       <span class="breadcrumb-sep text-muted" aria-hidden="true">/</span>
-      <span class="breadcrumb-current text-sm">{{ vehicle()!.name }}</span>
+      <span class="breadcrumb-current text-sm">
+        <app-vehicle-info [vehicle]="vehicle()!" />
+      </span>
     </nav>
 
     <!-- Hero header -->
     <div class="detail-hero card">
       <div class="hero-main">
         <div class="hero-title-row">
-          <span
-            class="status-dot status-dot-lg"
-            [class.status-dot-healthy]="vehicle()!.status === 'online' && vehicle()!.alertCount === 0"
-            [class.status-dot-warning]="vehicle()!.alertCount > 0"
-            [class.status-dot-offline]="vehicle()!.status === 'offline'"
-            [class.pulse]="vehicle()!.latestTelemetry?.engine_on"
-            aria-hidden="true"
-          ></span>
-          <h1 class="hero-name">{{ vehicle()!.name }}</h1>
-          <span
-            class="badge"
-            [class.badge-healthy]="vehicle()!.healthScore >= 80"
-            [class.badge-warning]="vehicle()!.healthScore >= 50 && vehicle()!.healthScore < 80"
-            [class.badge-critical]="vehicle()!.healthScore < 50"
-          >
-            {{ vehicle()!.healthScore }}% Health
-          </span>
+          <app-vehicle-info [vehicle]="vehicle()!" [showBadge]="true" />
         </div>
 
         @if (vehicle()!.make || vehicle()!.model || vehicle()!.year) {

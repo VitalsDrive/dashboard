@@ -2,6 +2,7 @@ export interface Fleet {
   id: string;
   name: string;
   owner_id: string;
+  organization_id: string;
   provisioning_code: string;
   settings?: {
     timezone?: string;

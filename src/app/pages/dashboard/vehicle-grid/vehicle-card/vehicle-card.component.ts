@@ -8,11 +8,12 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
-import { VehicleWithHealth } from '../../../../core/models/vehicle.model';
+import { VehicleWithHealth, getVehicleDisplayName } from '../../../../core/models/vehicle.model';
 import { HealthGaugeComponent } from '../../../../shared/components/health-gauge/health-gauge.component';
 import { BatteryStatusComponent } from '../../../../shared/components/battery-status/battery-status.component';
 import { DtcIndicatorComponent } from '../../../../shared/components/dtc-indicator/dtc-indicator.component';
 import { VehicleService } from '../../../../core/services/vehicle.service';
+import { VehicleInfoComponent } from '../../../../shared/components/vehicle-info/vehicle-info.component';
 
 @Component({
   selector: 'app-vehicle-card',
@@ -25,6 +26,7 @@ import { VehicleService } from '../../../../core/services/vehicle.service';
     HealthGaugeComponent,
     BatteryStatusComponent,
     DtcIndicatorComponent,
+    VehicleInfoComponent,
   ],
 })
 export class VehicleCardComponent {
@@ -32,6 +34,7 @@ export class VehicleCardComponent {
 
   readonly vehicle = input.required<VehicleWithHealth>();
   readonly clicked = output<string>();
+  protected readonly displayName = getVehicleDisplayName;
 
   readonly telemetryHistory = computed(() => {
     const map = this.vehicleService.telemetryMap();

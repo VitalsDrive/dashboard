@@ -1,18 +1,76 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/guards/auth.guard';
+import { authGuard, authGuardChild, allowlistGuard, onboardingGuard, onboardingStepGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
 
 export const routes: Routes = [
+  // Public routes
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('./pages/login/login.component').then(
+        (m) => m.LoginComponent,
+      ),
+    title: 'Login — VitalsDrive',
+  },
+  {
+    path: 'signup',
+    loadComponent: () =>
+      import('./pages/signup/signup.component').then(
+        (m) => m.SignupComponent,
+      ),
+    title: 'Sign Up — VitalsDrive',
+  },
+  {
+    path: 'pending',
+    loadComponent: () =>
+      import('./pages/pending/pending.component').then(
+        (m) => m.PendingComponent,
+      ),
+    title: 'Account Pending — VitalsDrive',
+  },
+
+  // Protected routes
   {
     path: '',
     loadComponent: () =>
       import('./layout/shell/shell.component').then((m) => m.ShellComponent),
     canActivate: [authGuard],
+    canActivateChild: [authGuardChild],
     children: [
       {
-        path: '',
-        redirectTo: 'dashboard',
-        pathMatch: 'full',
+        path: 'onboarding',
+        canActivate: [authGuard, onboardingStepGuard],
+        children: [
+          {
+            path: '',
+            redirectTo: 'organization',
+            pathMatch: 'full',
+          },
+          {
+            path: 'organization',
+            loadComponent: () =>
+              import('./pages/onboarding/organization/onboarding-organization.component').then(
+                (m) => m.OnboardingOrganizationComponent,
+              ),
+            title: 'Create Organization — VitalsDrive',
+          },
+          {
+            path: 'fleet',
+            loadComponent: () =>
+              import('./pages/onboarding/fleet/onboarding-fleet.component').then(
+                (m) => m.OnboardingFleetComponent,
+              ),
+            title: 'Create Fleet — VitalsDrive',
+          },
+          {
+            path: 'complete',
+            loadComponent: () =>
+              import('./pages/onboarding/complete/onboarding-complete.component').then(
+                (m) => m.OnboardingCompleteComponent,
+              ),
+            title: 'Setup Complete — VitalsDrive',
+          },
+        ],
       },
       {
         path: 'dashboard',
@@ -20,6 +78,7 @@ export const routes: Routes = [
           import('./pages/dashboard/dashboard.component').then(
             (m) => m.DashboardComponent,
           ),
+        canActivate: [allowlistGuard, onboardingGuard],
         title: 'Fleet Dashboard — VitalsDrive',
       },
       {
@@ -28,6 +87,7 @@ export const routes: Routes = [
           import('./pages/fleet-map/fleet-map.component').then(
             (m) => m.FleetMapComponent,
           ),
+        canActivate: [allowlistGuard, onboardingGuard],
         title: 'Fleet Map — VitalsDrive',
       },
       {
@@ -36,6 +96,7 @@ export const routes: Routes = [
           import('./pages/vehicle-detail/vehicle-detail.component').then(
             (m) => m.VehicleDetailComponent,
           ),
+        canActivate: [allowlistGuard, onboardingGuard],
         title: 'Vehicle Details — VitalsDrive',
       },
       {
@@ -44,11 +105,12 @@ export const routes: Routes = [
           import('./pages/alerts/alerts.component').then(
             (m) => m.AlertsComponent,
           ),
+        canActivate: [allowlistGuard, onboardingGuard],
         title: 'Active Alerts — VitalsDrive',
       },
       {
         path: 'backoffice',
-        canActivate: [adminGuard],
+        canActivate: [allowlistGuard, onboardingGuard, adminGuard],
         children: [
           {
             path: '',
@@ -88,6 +150,22 @@ export const routes: Routes = [
             title: 'Edit Vehicle — VitalsDrive',
           },
           {
+            path: 'devices',
+            loadComponent: () =>
+              import('./pages/backoffice/device-list/device-list.component').then(
+                (m) => m.DeviceListComponent,
+              ),
+            title: 'Manage Devices — VitalsDrive',
+          },
+          {
+            path: 'devices/:id',
+            loadComponent: () =>
+              import('./pages/backoffice/device-detail/device-detail.component').then(
+                (m) => m.DeviceDetailComponent,
+              ),
+            title: 'Device Details — VitalsDrive',
+          },
+          {
             path: 'users',
             loadComponent: () =>
               import('./pages/backoffice/user-management/user-management.component').then(
@@ -97,13 +175,12 @@ export const routes: Routes = [
           },
         ],
       },
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full',
+      },
     ],
-  },
-  {
-    path: 'login',
-    loadComponent: () =>
-      import('./pages/login/login.component').then((m) => m.LoginComponent),
-    title: 'Login — VitalsDrive',
   },
   {
     path: '**',

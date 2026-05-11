@@ -4,7 +4,9 @@ import { takeUntil } from 'rxjs/operators';
 import { SupabaseService } from './supabase.service';
 import { TelemetryService } from './telemetry.service';
 import { AlertService } from './alert.service';
-import { Vehicle, VehicleWithHealth } from '../models/vehicle.model';
+import { OrganizationService } from './organization.service';
+import { FleetService } from './fleet.service';
+import { Vehicle, VehicleWithHealth, getVehicleDisplayName } from '../models/vehicle.model';
 import { TelemetryRecord } from '../models/telemetry.model';
 
 const MAX_TELEMETRY_HISTORY = 100;
@@ -14,6 +16,8 @@ export class VehicleService implements OnDestroy {
   private readonly supabase = inject(SupabaseService);
   private readonly telemetryService = inject(TelemetryService);
   private readonly alertService = inject(AlertService);
+  private readonly organizationService = inject(OrganizationService);
+  private readonly fleetService = inject(FleetService);
   private readonly destroy$ = new Subject<void>();
 
   // === Core State (signals) ===
@@ -53,7 +57,7 @@ export class VehicleService implements OnDestroy {
   });
 
   readonly onlineVehicleCount = computed(() =>
-    this.vehicles().filter((v) => v.status === 'online').length,
+    this.vehicles().filter((v) => v.status === 'active').length,
   );
 
   readonly alertVehicleCount = computed(() =>
@@ -63,27 +67,49 @@ export class VehicleService implements OnDestroy {
   // === Initialization ===
 
   /**
-   * Load all vehicles and start real-time subscriptions.
-   * Call once from app init or dashboard component.
+   * Load vehicles scoped to the current organization (or specific fleet).
+   * If fleetId is provided, only loads vehicles from that fleet.
+   * If no fleetId, loads vehicles from all fleets in the org.
    */
-  async loadVehicles(): Promise<void> {
+  async loadVehicles(fleetId?: string): Promise<void> {
     this.isLoading.set(true);
     this.error.set(null);
 
     try {
-      const { data, error } = await this.supabase.client
+      let vehicleQuery = this.supabase.client
         .from('vehicles')
         .select('*')
         .order('make');
+
+      if (fleetId) {
+        vehicleQuery = vehicleQuery.eq('fleet_id', fleetId);
+      } else {
+        const org = this.organizationService.selectedOrganization();
+        if (!org) {
+          this.vehicles.set([]);
+          this.isLoading.set(false);
+          return;
+        }
+        const fleetIds = this.fleetService.fleets()
+          .filter((f) => f.organization_id === org.id)
+          .map((f) => f.id);
+
+        if (fleetIds.length === 0) {
+          this.vehicles.set([]);
+          this.isLoading.set(false);
+          return;
+        }
+        vehicleQuery = vehicleQuery.in('fleet_id', fleetIds);
+      }
+
+      const { data, error } = await vehicleQuery;
 
       if (error) throw error;
 
       this.vehicles.set(data ?? []);
 
-      // Start fleet-wide telemetry subscription
       this.telemetryService.subscribeToFleet();
 
-      // Wire telemetry batch updates into the map
       this.telemetryService.telemetryBatch$
         .pipe(takeUntil(this.destroy$))
         .subscribe((batch) => this.processBatch(batch));
@@ -91,6 +117,75 @@ export class VehicleService implements OnDestroy {
       this.error.set((err as Error).message ?? 'Failed to load vehicles');
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Get vehicles scoped to the current organization (or specific fleet).
+   * If fleetId is provided, returns vehicles from that fleet only.
+   * If no fleetId, returns vehicles from all fleets in the org.
+   */
+  async getVehicles(fleetId?: string): Promise<Vehicle[]> {
+    const org = this.organizationService.selectedOrganization();
+    if (!org) return [];
+
+    if (fleetId) {
+      return this.fleetService.getFleetVehicles(fleetId);
+    }
+
+    const fleetIds = this.fleetService.fleets()
+      .filter((f) => f.organization_id === org.id)
+      .map((f) => f.id);
+
+    if (fleetIds.length === 0) return [];
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from('vehicles')
+        .select('*')
+        .in('fleet_id', fleetIds)
+        .order('make');
+
+      if (error) throw error;
+      return data ?? [];
+    } catch (err: unknown) {
+      this.error.set((err as Error).message ?? 'Failed to load vehicles');
+      return [];
+    }
+  }
+
+  /**
+   * Get a single vehicle by ID, verifying it belongs to a fleet in the current org.
+   */
+  async getVehicle(id: string): Promise<Vehicle | null> {
+    const org = this.organizationService.selectedOrganization();
+    if (!org) {
+      this.error.set('No organization selected');
+      return null;
+    }
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from('vehicles')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      const fleetIds = this.fleetService.fleets()
+        .filter((f) => f.organization_id === org.id)
+        .map((f) => f.id);
+
+      if (!fleetIds.includes(data.fleet_id)) {
+        this.error.set('Vehicle not found in current organization');
+        return null;
+      }
+
+      return data;
+    } catch (err: unknown) {
+      this.error.set((err as Error).message ?? 'Failed to load vehicle');
+      return null;
     }
   }
 
@@ -149,7 +244,7 @@ export class VehicleService implements OnDestroy {
         );
         // Trigger alert evaluation
         const vehicle = this.vehicles().find((v) => v.id === vehicleId);
-        this.alertService.checkAndCreateAlerts(record, vehicle?.name);
+        this.alertService.checkAndCreateAlerts(record, vehicle ? getVehicleDisplayName(vehicle) : undefined);
       });
       return newMap;
     });

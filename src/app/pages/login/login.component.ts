@@ -1,38 +1,54 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatIconModule } from '@angular/material/icon';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+} from "@angular/core";
+import { Router } from "@angular/router";
+import { MatButtonModule } from "@angular/material/button";
+import { MatIconModule } from "@angular/material/icon";
+import { AuthService } from "../../core/services/auth.service";
 
 @Component({
-  selector: 'app-login',
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: "app-login",
+  templateUrl: "./login.component.html",
+  styleUrl: "./login.component.css",
   imports: [
-    FormsModule,
     MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
     MatIconModule,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent {
-  constructor(private readonly router: Router) {}
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
-  email = '';
-  password = '';
-  showPassword = false;
+  showPassword = signal(false);
 
-  onSubmit(): void {
-    // TODO: Implement Supabase Auth login
-    // For MVP: navigate directly to dashboard
-    this.router.navigate(['/dashboard']);
+  isLoading = this.auth.isLoading;
+  error = signal<string | null>(null);
+
+  async onSubmit(): Promise<void> {
+    this.error.set(null);
+
+    const result = await this.auth.signIn();
+
+    if (result.user) {
+      await this.auth.initializeUserState();
+    } else if (result.error) {
+      this.error.set(result.error.message ?? "Login failed");
+      return;
+    }
+
+    const state = await this.auth.initializeUserState();
+    if (state.hasOrganization && state.hasFleet) {
+      this.router.navigate(["/dashboard"]);
+    } else {
+      this.router.navigate(["/onboarding"]);
+    }
   }
 
   togglePassword(): void {
-    this.showPassword = !this.showPassword;
+    this.showPassword.update((val) => !val);
   }
 }

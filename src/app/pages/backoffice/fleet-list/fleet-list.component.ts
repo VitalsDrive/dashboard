@@ -255,7 +255,7 @@ export class FleetListComponent implements OnInit {
   async createFleet(): Promise<void> {
     if (!this.newFleetName.trim()) return;
     
-    await this.fleetService.createFleet(this.newFleetName.trim(), '');
+    await this.fleetService.createFleet(this.newFleetName.trim());
     this.newFleetName = '';
     this.showCreateModal = false;
   }

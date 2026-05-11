@@ -1,18 +1,11 @@
 <aside
   class="detail-panel"
   role="complementary"
-  [attr.aria-label]="vehicle().name + ' details'"
+  [attr.aria-label]="displayName(vehicle()) + ' details'"
 >
   <div class="panel-header">
     <div class="panel-header-left">
-      <span
-        class="status-dot"
-        [class.status-dot-healthy]="vehicle().status === 'online' && vehicle().alertCount === 0"
-        [class.status-dot-warning]="vehicle().alertCount > 0"
-        [class.status-dot-offline]="vehicle().status === 'offline'"
-        aria-hidden="true"
-      ></span>
-      <h2 class="panel-title">{{ vehicle().name }}</h2>
+      <app-vehicle-info [vehicle]="vehicle()" />
     </div>
     <button
       mat-icon-button

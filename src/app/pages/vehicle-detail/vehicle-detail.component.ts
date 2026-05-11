@@ -13,6 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { VehicleService } from '../../core/services/vehicle.service';
 import { HealthGaugeComponent } from '../../shared/components/health-gauge/health-gauge.component';
+import { VehicleInfoComponent } from '../../shared/components/vehicle-info/vehicle-info.component';
 import { DtcListComponent } from './dtc-list/dtc-list.component';
 import { BatteryAnalysisComponent } from './battery-analysis/battery-analysis.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
@@ -30,6 +31,7 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
     MatIconModule,
     MatTabsModule,
     HealthGaugeComponent,
+    VehicleInfoComponent,
     DtcListComponent,
     BatteryAnalysisComponent,
     LoadingSpinnerComponent,

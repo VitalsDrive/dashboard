@@ -1,0 +1,20 @@
+<div class="vehicle-info">
+  <span
+    class="status-dot"
+    [class.status-dot-healthy]="vehicle().status === 'active' && vehicle().alertCount === 0"
+    [class.status-dot-warning]="vehicle().alertCount > 0"
+    [class.status-dot-offline]="vehicle().status === 'inactive'"
+    aria-hidden="true"
+  ></span>
+  <span class="vehicle-name">{{ displayName(vehicle()) }}</span>
+  @if (showBadge() && vehicle().healthScore >= 0) {
+    <span
+      class="badge"
+      [class.badge-healthy]="vehicle().healthScore >= 80"
+      [class.badge-warning]="vehicle().healthScore >= 50 && vehicle().healthScore < 80"
+      [class.badge-critical]="vehicle().healthScore < 50"
+    >
+      {{ vehicle().healthScore }}% Health
+    </span>
+  }
+</div>

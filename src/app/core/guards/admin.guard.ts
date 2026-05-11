@@ -1,35 +1,82 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
+import { AuthService } from '../services/auth.service';
+import { OrganizationService } from '../services/organization.service';
 import { SupabaseService } from '../services/supabase.service';
 
 /**
- * Admin guard — checks if user is fleet owner or admin.
- * For MVP, this is stubbed. Replace with actual role check when auth is implemented.
+ * adminGuard — ensures user has admin/owner role in their organization.
+ * Redirects to /dashboard if user is not an admin.
+ * Should be used after authGuard and allowlistGuard.
  */
 export const adminGuard: CanActivateFn = async () => {
-  const supabase = inject(SupabaseService);
+  const auth = inject(AuthService);
   const router = inject(Router);
+  const organizationService = inject(OrganizationService);
+  const supabase = inject(SupabaseService);
 
-  const { data: { session } } = await supabase.client.auth.getSession();
-  
-  if (!session?.user) {
-    return router.createUrlTree(['/login']);
+  while (auth.isLoading()) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+
+  const currentUser = auth.currentUser();
+  if (!currentUser) {
+    return router.createUrlTree(['/dashboard']);
+  }
+
+  const currentOrg = organizationService.selectedOrganization();
+  if (!currentOrg) {
+    return router.createUrlTree(['/dashboard']);
+  }
+
+  const { data, error } = await supabase.client
+    .from('fleet_members')
+    .select('role')
+    .eq('user_id', currentUser.id)
+    .eq('organization_id', currentOrg.id)
+    .in('role', ['owner', 'admin'])
+    .maybeSingle();
+
+  if (error || !data) {
+    return router.createUrlTree(['/dashboard']);
   }
 
   return true;
 };
 
 /**
- * Owner guard — checks if user is fleet owner.
+ * ownerGuard — ensures user has owner role in their organization.
  */
 export const ownerGuard: CanActivateFn = async () => {
-  const supabase = inject(SupabaseService);
+  const auth = inject(AuthService);
   const router = inject(Router);
+  const organizationService = inject(OrganizationService);
+  const supabase = inject(SupabaseService);
 
-  const { data: { session } } = await supabase.client.auth.getSession();
-  
-  if (!session?.user) {
-    return router.createUrlTree(['/login']);
+  while (auth.isLoading()) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+
+  const currentUser = auth.currentUser();
+  if (!currentUser) {
+    return router.createUrlTree(['/dashboard']);
+  }
+
+  const currentOrg = organizationService.selectedOrganization();
+  if (!currentOrg) {
+    return router.createUrlTree(['/dashboard']);
+  }
+
+  const { data, error } = await supabase.client
+    .from('fleet_members')
+    .select('role')
+    .eq('user_id', currentUser.id)
+    .eq('organization_id', currentOrg.id)
+    .eq('role', 'owner')
+    .maybeSingle();
+
+  if (error || !data) {
+    return router.createUrlTree(['/dashboard']);
   }
 
   return true;
