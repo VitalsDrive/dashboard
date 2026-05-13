@@ -1,0 +1,74 @@
+<div class="invite-page">
+  <div class="invite-header">
+    <h1>Invite your team</h1>
+    <p class="invite-subtitle">Share this link to give teammates access to your fleet.</p>
+  </div>
+
+  @if (error()) {
+    <div class="error-banner" role="alert">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  <div class="invite-section">
+    <span class="eyebrow-label">Invite type</span>
+    <mat-button-toggle-group
+      [value]="inviteType()"
+      (change)="inviteType.set($event.value)"
+      aria-label="Invite type"
+      class="invite-type-group"
+    >
+      <mat-button-toggle value="single-use">Single-use link</mat-button-toggle>
+      <mat-button-toggle value="multi-use">Multi-use link (7 days)</mat-button-toggle>
+    </mat-button-toggle-group>
+  </div>
+
+  <div class="invite-section">
+    <span class="eyebrow-label">Member role</span>
+    <mat-form-field appearance="outline" class="role-field">
+      <mat-label>Member role</mat-label>
+      <mat-select [value]="inviteRole()" (selectionChange)="inviteRole.set($event.value)">
+        <mat-option value="viewer">Viewer</mat-option>
+        <mat-option value="driver">Driver</mat-option>
+        <mat-option value="fleet_admin">Fleet Admin</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <p class="helper-text">Invitees join with this role. You can change it later.</p>
+  </div>
+
+  <div class="invite-actions">
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="generateInvite()"
+      [disabled]="isLoading()"
+      class="generate-btn"
+    >
+      @if (isLoading()) {
+        <mat-spinner diameter="20"></mat-spinner>
+        <span>Generating...</span>
+      } @else {
+        Generate Invite Link
+      }
+    </button>
+  </div>
+
+  @if (inviteLink()) {
+    <div class="link-section">
+      <mat-form-field appearance="outline" class="link-field">
+        <mat-label>Invite link</mat-label>
+        <input matInput [value]="inviteLink()" readonly class="link-input" />
+        <mat-icon matPrefix aria-hidden="true">link</mat-icon>
+      </mat-form-field>
+      <button
+        mat-stroked-button
+        class="copy-btn"
+        (click)="copyLink()"
+      >
+        <mat-icon>content_copy</mat-icon>
+        Copy Invite Link
+      </button>
+    </div>
+  }
+</div>
