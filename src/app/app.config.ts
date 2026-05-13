@@ -12,6 +12,7 @@ import { provideAuth0 } from '@auth0/auth0-angular';
 
 import { routes } from './app.routes';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
+import { environment } from '../environments/environment';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -25,10 +26,10 @@ export const appConfig: ApplicationConfig = {
       multi: true,
     },
     provideAuth0({
-      domain: 'ronbiter.auth0.com',
-      clientId: 'vlGLhmcqPYQWjWrHzC49fwYnJ54Segmk',
+      domain: environment.auth0.domain,
+      clientId: environment.auth0.clientId,
       authorizationParams: {
-        audience: 'https://ronbiter.auth0.com/api/v2/',
+        audience: environment.auth0.audience,
         redirect_uri: window.location.origin,
         scope: 'openid profile email',
       },
