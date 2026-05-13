@@ -4,7 +4,10 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
-    "types": ["vitest/globals"]
+    "types": ["jest", "node"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "strict": false
   },
   "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]
 }

@@ -7,7 +7,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "test": "ng test",
+    "test": "jest --config jest.config.js",
     "lint": "ng lint"
   },
   "dependencies": {
