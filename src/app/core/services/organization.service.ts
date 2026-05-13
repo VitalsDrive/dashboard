@@ -1,10 +1,12 @@
 import { Injectable, signal, inject } from "@angular/core";
 import { SupabaseService } from "./supabase.service";
+import { AuthService } from "./auth.service";
 import { Organization, Invitation, OrgMember } from "../models/organization.model";
 
 @Injectable({ providedIn: "root" })
 export class OrganizationService {
   private readonly supabase = inject(SupabaseService);
+  private readonly authService = inject(AuthService);
 
   readonly organizations = signal<Organization[]>([]);
   readonly selectedOrganization = signal<Organization | null>(null);
@@ -63,10 +65,11 @@ export class OrganizationService {
 
   async createOrganization(name: string): Promise<Organization | null> {
     try {
-      const { data: { user } } = await this.supabase.client.auth.getUser();
+      const currentUser = this.authService.currentUser();
+      const ownerId = currentUser?.id ?? null;
       const { data, error } = await this.supabase.client
         .from("organizations")
-        .insert({ name, owner_id: user?.id })
+        .insert({ name, owner_id: ownerId })
         .select()
         .single();
 
@@ -140,7 +143,7 @@ export class OrganizationService {
     role: Invitation["role"],
   ): Promise<Invitation | null> {
     try {
-      const { data: { user } } = await this.supabase.client.auth.getUser();
+      const currentUser = this.authService.currentUser();
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -150,7 +153,7 @@ export class OrganizationService {
           organization_id: orgId,
           email,
           role,
-          invited_by: user?.id,
+          invited_by: currentUser?.id ?? null,
           expires_at: expiresAt.toISOString(),
         })
         .select()

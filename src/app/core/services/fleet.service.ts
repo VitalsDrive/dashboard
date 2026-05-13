@@ -1,6 +1,7 @@
 import { Injectable, signal, computed, inject } from "@angular/core";
 import { SupabaseService } from "./supabase.service";
 import { OrganizationService } from "./organization.service";
+import { AuthService } from "./auth.service";
 import { Fleet, FleetWithStats } from "../models/fleet.model";
 import { Vehicle } from "../models/vehicle.model";
 import { FleetMember, User } from "../models/user.model";
@@ -9,6 +10,7 @@ import { FleetMember, User } from "../models/user.model";
 export class FleetService {
   private readonly supabase = inject(SupabaseService);
   private readonly organizationService = inject(OrganizationService);
+  private readonly authService = inject(AuthService);
 
   readonly fleets = signal<Fleet[]>([]);
   readonly selectedFleet = signal<Fleet | null>(null);
@@ -66,10 +68,11 @@ export class FleetService {
     }
 
     try {
-      const { data: { user } } = await this.supabase.client.auth.getUser();
+      const currentUser = this.authService.currentUser();
+      const ownerId = currentUser?.id ?? null;
       const { data, error } = await this.supabase.client
         .from("fleets")
-        .insert({ name, owner_id: user?.id, organization_id: orgId })
+        .insert({ name, owner_id: ownerId, organization_id: orgId })
         .select()
         .single();
 

@@ -197,7 +197,7 @@ export class OnboardingFleetComponent {
       const fleet = await this.fleetService.createFleet(this.fleetName.trim(), orgId);
 
       if (fleet) {
-        this.router.navigate(['/onboarding/complete']);
+        this.router.navigate(['/onboarding/vehicle']);
       } else {
         this.error.set(this.fleetService.error() ?? 'Failed to create fleet');
       }
