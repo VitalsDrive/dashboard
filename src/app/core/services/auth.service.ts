@@ -113,6 +113,11 @@ export class AuthService {
     return this.internalToken;
   }
 
+  async refreshTokens(): Promise<void> {
+    this.internalToken = null;
+    await this.getToken();
+  }
+
   async getToken(): Promise<string | null> {
     if (this.internalToken) {
       return this.internalToken;
