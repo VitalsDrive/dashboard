@@ -29,6 +29,15 @@ export const routes: Routes = [
     title: 'Account Pending — VitalsDrive',
   },
 
+  {
+    path: 'join',
+    loadComponent: () =>
+      import('./features/join/join.component').then(
+        (m) => m.JoinComponent,
+      ),
+    title: 'Join Fleet — VitalsDrive',
+  },
+
   // Protected routes
   {
     path: '',

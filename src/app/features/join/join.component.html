@@ -1,0 +1,19 @@
+<div class="join-card">
+  @if (isLoading()) {
+    <mat-spinner diameter="40"></mat-spinner>
+    <p class="join-status-text">Joining your team&hellip;</p>
+  }
+
+  @if (error()) {
+    <mat-icon class="join-icon join-icon--error">error_outline</mat-icon>
+    <h2 class="join-heading">Something went wrong</h2>
+    <p class="join-status-text">{{ error() }}</p>
+    <a mat-stroked-button routerLink="/">Back to Home</a>
+  }
+
+  @if (success()) {
+    <mat-icon class="join-icon join-icon--success">check_circle</mat-icon>
+    <h2 class="join-heading">You've joined!</h2>
+    <p class="join-status-text">Redirecting to your fleet&hellip;</p>
+  }
+</div>

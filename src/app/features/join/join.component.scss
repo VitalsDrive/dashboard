@@ -1,0 +1,46 @@
+:host {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: var(--vd-bg-base);
+}
+
+.join-card {
+  background: var(--vd-bg-surface);
+  border-radius: var(--vd-radius-lg);
+  box-shadow: var(--vd-shadow-card);
+  padding: var(--vd-space-8);
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.join-heading {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.join-status-text {
+  margin: 0;
+  color: var(--vd-text-secondary, rgba(0, 0, 0, 0.6));
+}
+
+.join-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+
+  &--success {
+    color: var(--vd-healthy);
+  }
+
+  &--error {
+    color: var(--vd-critical);
+  }
+}
