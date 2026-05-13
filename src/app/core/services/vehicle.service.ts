@@ -6,8 +6,10 @@ import { TelemetryService } from './telemetry.service';
 import { AlertService } from './alert.service';
 import { OrganizationService } from './organization.service';
 import { FleetService } from './fleet.service';
-import { Vehicle, VehicleWithHealth, getVehicleDisplayName } from '../models/vehicle.model';
+import { Vehicle, VehicleWithHealth, CreateVehicleDto, getVehicleDisplayName } from '../models/vehicle.model';
 import { TelemetryRecord } from '../models/telemetry.model';
+
+export { Vehicle, CreateVehicleDto } from '../models/vehicle.model';
 
 const MAX_TELEMETRY_HISTORY = 100;
 
@@ -277,6 +279,104 @@ export class VehicleService implements OnDestroy {
       fuel_level: raw['fuel_level'] as number | undefined,
       signal_strength: raw['signal_strength'] as number | undefined,
     };
+  }
+
+  // === Fleet Management CRUD (Phase 2) ===
+
+  /**
+   * Load all active vehicles across all fleets (for "All Fleets" view).
+   */
+  async loadAllVehicles(): Promise<void> {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from('vehicles')
+        .select('*')
+        .eq('status', 'active')
+        .order('nickname');
+
+      if (error) throw error;
+      this.vehicles.set(data ?? []);
+    } catch (err: unknown) {
+      this.error.set((err as Error).message ?? 'Failed to load vehicles');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Create a new vehicle and optimistically append to vehicles signal.
+   */
+  async createVehicle(data: CreateVehicleDto): Promise<Vehicle | null> {
+    this.error.set(null);
+
+    try {
+      const { data: created, error } = await this.supabase.client
+        .from('vehicles')
+        .insert({ ...data, status: 'active' })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      this.vehicles.update((vehicles) => [...vehicles, created]);
+      return created;
+    } catch (err: unknown) {
+      this.error.set((err as Error).message ?? 'Failed to create vehicle');
+      return null;
+    }
+  }
+
+  /**
+   * Update a vehicle and patch it in the vehicles signal.
+   */
+  async updateVehicle(
+    id: string,
+    updates: Partial<CreateVehicleDto>,
+  ): Promise<boolean> {
+    this.error.set(null);
+
+    try {
+      const { error } = await this.supabase.client
+        .from('vehicles')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      this.vehicles.update((vehicles) =>
+        vehicles.map((v) => (v.id === id ? { ...v, ...updates } : v)),
+      );
+      return true;
+    } catch (err: unknown) {
+      this.error.set((err as Error).message ?? 'Failed to update vehicle');
+      return false;
+    }
+  }
+
+  /**
+   * Soft-delete: sets status to 'inactive'. Does NOT hard-delete.
+   * Historical telemetry is preserved.
+   */
+  async deleteVehicle(id: string): Promise<boolean> {
+    this.error.set(null);
+
+    try {
+      const { error } = await this.supabase.client
+        .from('vehicles')
+        .update({ status: 'inactive', updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      this.vehicles.update((vehicles) => vehicles.filter((v) => v.id !== id));
+      return true;
+    } catch (err: unknown) {
+      this.error.set((err as Error).message ?? 'Failed to delete vehicle');
+      return false;
+    }
   }
 
   ngOnDestroy(): void {
