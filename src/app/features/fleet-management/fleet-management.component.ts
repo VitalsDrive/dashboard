@@ -22,7 +22,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { VehicleService } from '../../core/services/vehicle.service';
 import { FleetService } from '../../core/services/fleet.service';
 import { Vehicle, CreateVehicleDto } from '../../core/models/vehicle.model';
-import { AddVehicleDialogComponent } from './add-vehicle-dialog.component';
+import { AddVehicleDialogComponent, AddVehicleDialogData } from './add-vehicle-dialog.component';
 import { RemoveVehicleDialogComponent } from './remove-vehicle-dialog.component';
 
 @Component({
@@ -80,6 +80,23 @@ export class FleetManagementComponent implements OnInit {
       const vehicle = await this.vehicleService.createVehicle(result);
       if (vehicle) {
         this.snackBar.open('Vehicle added', 'Dismiss', { duration: 3000 });
+      }
+    });
+  }
+
+  openEditVehicleDialog(vehicle: Vehicle): void {
+    const data: AddVehicleDialogData = { vehicle };
+    const dialogRef = this.dialog.open(AddVehicleDialogComponent, {
+      width: '480px',
+      panelClass: 'vd-dialog-panel',
+      data,
+    });
+
+    dialogRef.afterClosed().subscribe(async (result: CreateVehicleDto | undefined) => {
+      if (!result) return;
+      const updated = await this.vehicleService.updateVehicle(vehicle.id, result);
+      if (updated) {
+        this.snackBar.open('Vehicle updated', 'Dismiss', { duration: 3000 });
       }
     });
   }

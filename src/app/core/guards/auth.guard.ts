@@ -4,13 +4,21 @@ import { AuthService } from '../services/auth.service';
 import { OrganizationService } from '../services/organization.service';
 import { FleetService } from '../services/fleet.service';
 
+const waitForAuth = async (auth: AuthService): Promise<void> => {
+  const TIMEOUT_MS = 5000;
+  const POLL_MS = 50;
+  let elapsed = 0;
+  while (auth.isLoading() && elapsed < TIMEOUT_MS) {
+    await new Promise(resolve => setTimeout(resolve, POLL_MS));
+    elapsed += POLL_MS;
+  }
+};
+
 const authCheck = async (): Promise<boolean | UrlTree> => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  while (auth.isLoading()) {
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
+  await waitForAuth(auth);
 
   if (!auth.isAuthenticated()) {
     return router.createUrlTree(['/login']);
@@ -41,9 +49,7 @@ export const onboardingGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  while (auth.isLoading()) {
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
+  await waitForAuth(auth);
 
   if (!auth.isOnboardingComplete()) {
     return router.createUrlTree(['/onboarding']);
@@ -65,9 +71,7 @@ export const onboardingStepGuard: CanActivateFn = async (route) => {
   const organizationService = inject(OrganizationService);
   const fleetService = inject(FleetService);
 
-  while (auth.isLoading()) {
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
+  await waitForAuth(auth);
 
   if (!auth.isAuthenticated()) {
     return router.createUrlTree(['/login']);

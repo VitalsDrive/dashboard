@@ -36,28 +36,7 @@ export class JoinComponent implements OnInit {
   }
 
   private async redeemToken(token: string): Promise<void> {
-    // Step 1: Validate token against org_invites
-    const { data: invite, error: inviteErr } = await this.supabaseService.client
-      .from('org_invites')
-      .select('*')
-      .eq('token', token)
-      .gt('expires_at', new Date().toISOString())
-      .single();
-
-    if (inviteErr || !invite) {
-      this.error.set('This invite link is invalid or has expired.');
-      this.isLoading.set(false);
-      return;
-    }
-
-    // Step 2: Reject already-used single-use tokens
-    if (invite.type === 'single-use' && invite.used_at) {
-      this.error.set('This invite link has already been used.');
-      this.isLoading.set(false);
-      return;
-    }
-
-    // Step 3: Require authentication (T-02-06-03)
+    // Require authentication before redemption (T-02-06-03)
     if (!this.authService.isAuthenticated()) {
       await this.router.navigate(['/login'], {
         queryParams: { returnUrl: `/join?token=${token}` },
@@ -65,7 +44,7 @@ export class JoinComponent implements OnInit {
       return;
     }
 
-    // Step 4: Get Auth0 sub — currentUser().id is user.sub (see auth.service.ts line 61)
+    // Get Auth0 sub — currentUser().id is user.sub (see auth.service.ts)
     const user = this.authService.currentUser();
     const sub = user?.id;
 
@@ -75,48 +54,24 @@ export class JoinComponent implements OnInit {
       return;
     }
 
-    // Step 5: Get first fleet for the org
-    const { data: fleet, error: fleetErr } = await this.supabaseService.client
-      .from('fleets')
-      .select('id')
-      .eq('organization_id', invite.org_id)
-      .limit(1)
-      .single();
+    // Atomic redemption via DB function (CR-05: eliminates TOCTOU race condition).
+    // redeem_invite() uses FOR UPDATE row locking, inserts fleet_member, marks used_at.
+    // Raises 'invalid_token' or 'no_fleet' on failure.
+    const { error: rpcErr } = await this.supabaseService.client
+      .rpc('redeem_invite', { p_token: token, p_user_id: sub });
 
-    if (fleetErr || !fleet) {
-      this.error.set('Unable to join — this organization has no fleet yet.');
+    if (rpcErr) {
+      if (rpcErr.message?.includes('invalid_token')) {
+        this.error.set('This invite link is invalid, expired, or has already been used.');
+      } else if (rpcErr.message?.includes('no_fleet')) {
+        this.error.set('Unable to join — this organization has no fleet yet.');
+      } else {
+        this.error.set('Failed to join the organization. Please try again.');
+      }
       this.isLoading.set(false);
       return;
     }
 
-    // Step 6: Insert fleet_member row — role comes from org_invites (T-02-06-02: never 'owner')
-    const { error: memberErr } = await this.supabaseService.client
-      .from('fleet_members')
-      .insert({
-        user_id: sub,
-        fleet_id: fleet.id,
-        organization_id: invite.org_id,
-        role: invite.role,
-      });
-
-    if (memberErr) {
-      // Conflict = already a member — treat as success
-      if (memberErr.code !== '23505') {
-        this.error.set('Failed to join the organization. Please try again.');
-        this.isLoading.set(false);
-        return;
-      }
-    }
-
-    // Step 7: Mark single-use token as used (T-02-06-04)
-    if (invite.type === 'single-use') {
-      await this.supabaseService.client
-        .from('org_invites')
-        .update({ used_at: new Date().toISOString() })
-        .eq('token', token);
-    }
-
-    // Step 8: Success — redirect after brief delay
     this.success.set(true);
     this.isLoading.set(false);
 

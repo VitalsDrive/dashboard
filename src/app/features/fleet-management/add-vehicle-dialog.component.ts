@@ -6,13 +6,17 @@ import {
   ReactiveFormsModule,
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
-import { CreateVehicleDto } from '../../core/models/vehicle.model';
+import { Vehicle, CreateVehicleDto } from '../../core/models/vehicle.model';
 import { FleetService } from '../../core/services/fleet.service';
 import { MatSelectModule } from '@angular/material/select';
+
+export interface AddVehicleDialogData {
+  vehicle?: Vehicle;
+}
 
 @Component({
   selector: 'app-add-vehicle-dialog',
@@ -28,7 +32,7 @@ import { MatSelectModule } from '@angular/material/select';
   ],
   template: `
     <div class="vd-dialog">
-      <h2 mat-dialog-title class="dialog-title">Add Vehicle</h2>
+      <h2 mat-dialog-title class="dialog-title">{{ isEditMode ? 'Edit Vehicle' : 'Add Vehicle' }}</h2>
 
       <mat-dialog-content>
         <form [formGroup]="form" novalidate class="vehicle-form">
@@ -93,7 +97,7 @@ import { MatSelectModule } from '@angular/material/select';
           (click)="submit()"
           [disabled]="form.invalid"
         >
-          Add Vehicle
+          {{ isEditMode ? 'Save Changes' : 'Add Vehicle' }}
         </button>
       </mat-dialog-actions>
     </div>
@@ -131,17 +135,22 @@ export class AddVehicleDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly dialogRef = inject(MatDialogRef<AddVehicleDialogComponent>);
   private readonly fleetService = inject(FleetService);
+  private readonly data = inject<AddVehicleDialogData>(MAT_DIALOG_DATA, { optional: true });
 
   readonly fleets = this.fleetService.fleets;
+  readonly isEditMode = !!this.data?.vehicle;
 
   readonly form: FormGroup = this.fb.group({
-    nickname: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(40)]],
-    fleet_id: ['', Validators.required],
-    make: [null],
-    model: [null],
-    year: [null, Validators.pattern(/^\d{4}$/)],
-    license_plate: [null],
-    vin: [null],
+    nickname: [
+      this.data?.vehicle?.nickname ?? '',
+      [Validators.required, Validators.minLength(2), Validators.maxLength(40)],
+    ],
+    fleet_id: [this.data?.vehicle?.fleet_id ?? '', Validators.required],
+    make: [this.data?.vehicle?.make ?? null],
+    model: [this.data?.vehicle?.model ?? null],
+    year: [this.data?.vehicle?.year ?? null, Validators.pattern(/^\d{4}$/)],
+    license_plate: [this.data?.vehicle?.license_plate ?? null],
+    vin: [this.data?.vehicle?.vin ?? null],
   });
 
   cancel(): void {

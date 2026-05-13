@@ -4,7 +4,7 @@ import { Router } from "@angular/router";
 import { AuthService as Auth0Service, User } from "@auth0/auth0-angular";
 import { HttpClient } from "@angular/common/http";
 import { firstValueFrom, catchError, of } from "rxjs";
-import { environment } from "../../../environments/environment.development";
+import { environment } from "../../../environments/environment";
 import { SupabaseService } from "./supabase.service";
 
 export interface MockUser {
@@ -43,7 +43,8 @@ export class AuthService {
   private readonly TOKEN_KEY = 'vd_access_token';
   private readonly REFRESH_KEY = 'vd_refresh_token';
 
-  private internalToken: string | null = localStorage.getItem('vd_access_token');
+  // Access token is stored in memory only — never persisted to localStorage (CR-03).
+  private internalToken: string | null = null;
 
   // isAuthenticated: real boolean signal backed by Auth0 Observable (D-08)
   // Fix: replaces broken computed(() => firstValueFrom(...)) which returned a Promise
@@ -85,12 +86,10 @@ export class AuthService {
     this.error.set(null);
 
     try {
+      // loginWithRedirect navigates away — code after this never executes (CR-06).
+      // Token exchange is triggered in the auth callback flow, not here.
       await firstValueFrom(this.auth0.loginWithRedirect());
-
-      const auth0Token = await firstValueFrom(this.auth0.getAccessTokenSilently());
-      await this.exchangeToken(auth0Token);
-
-      return { user: this.currentUser()!, error: null };
+      return { user: null as any, error: null };
     } catch (err: any) {
       this.error.set(err.message || "Sign in failed");
       this.isLoading.set(false);
@@ -106,26 +105,8 @@ export class AuthService {
       )
     );
 
+    // Store access token in memory only — not in localStorage (CR-03).
     this.internalToken = data.accessToken;
-    localStorage.setItem(this.TOKEN_KEY, data.accessToken);
-    localStorage.setItem(this.REFRESH_KEY, data.refreshToken);
-  }
-
-  async refreshTokens(): Promise<void> {
-    const storedRefresh = localStorage.getItem(this.REFRESH_KEY);
-    if (!storedRefresh) {
-      throw new Error('No refresh token available');
-    }
-
-    const data = await firstValueFrom(
-      this.http.post<{ accessToken: string }>(
-        `${environment.authServiceUrl}/auth/refresh`,
-        { refreshToken: storedRefresh },
-      )
-    );
-
-    this.internalToken = data.accessToken;
-    localStorage.setItem(this.TOKEN_KEY, data.accessToken);
   }
 
   getInternalToken(): string | null {
@@ -181,17 +162,17 @@ export class AuthService {
   }
 
   async initializeUserState(): Promise<UserState> {
-    // D-07: validate stored JWT against auth-service before any Supabase queries
-    const storedToken = localStorage.getItem(this.TOKEN_KEY);
-    if (storedToken) {
+    // D-07: validate in-memory JWT against auth-service before any Supabase queries.
+    // Token is memory-only (CR-03) — no localStorage read needed.
+    if (this.internalToken) {
       try {
         const me = await firstValueFrom(
           this.http.get<MeResponse>(
             `${environment.authServiceUrl}/auth/me`,
-            { headers: { Authorization: `Bearer ${storedToken}` } }
+            { headers: { Authorization: `Bearer ${this.internalToken}` } }
           ).pipe(
             catchError(() => {
-              // 401 or network error — clear stored tokens
+              // 401 or network error — clear token
               this.signOut();
               return of(null);
             })
@@ -199,7 +180,6 @@ export class AuthService {
         );
 
         if (!me) {
-          // Token invalid — signed out, stop initialization
           return {
             isAllowlisted: false,
             isOnboardingComplete: false,

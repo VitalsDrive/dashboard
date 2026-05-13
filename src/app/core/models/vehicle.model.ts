@@ -34,5 +34,7 @@ export interface VehicleWithHealth extends Vehicle {
 }
 
 export function getVehicleDisplayName(vehicle: Vehicle): string {
-  return `${vehicle.year ? vehicle.year + ' ' : ''}${vehicle.make} ${vehicle.model}`.trim();
+  if (vehicle.nickname) return vehicle.nickname;
+  const parts = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : 'Unknown Vehicle';
 }

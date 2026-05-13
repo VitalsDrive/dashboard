@@ -21,6 +21,7 @@ export class VehicleService implements OnDestroy {
   private readonly organizationService = inject(OrganizationService);
   private readonly fleetService = inject(FleetService);
   private readonly destroy$ = new Subject<void>();
+  private readonly reloadVehicles$ = new Subject<void>();
 
   // === Core State (signals) ===
 
@@ -112,8 +113,10 @@ export class VehicleService implements OnDestroy {
 
       this.telemetryService.subscribeToFleet();
 
+      // Cancel any previous subscription before creating a new one (WR-04)
+      this.reloadVehicles$.next();
       this.telemetryService.telemetryBatch$
-        .pipe(takeUntil(this.destroy$))
+        .pipe(takeUntil(this.reloadVehicles$), takeUntil(this.destroy$))
         .subscribe((batch) => this.processBatch(batch));
     } catch (err: unknown) {
       this.error.set((err as Error).message ?? 'Failed to load vehicles');

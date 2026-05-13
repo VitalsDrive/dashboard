@@ -2,10 +2,12 @@ export const environment = {
   production: true,
   supabaseUrl: 'http://localhost:54321',
   supabaseAnonKey: 'your-local-anon-key',
+  // SECURITY: Never commit real Supabase anon keys to source control.
+  // Set SUPABASE_ANON_KEY at build time via environment injection or replace
+  // this placeholder before deploying. The key below is intentionally invalid.
   supabase: {
     url: 'https://odwctmlawibhaclptsew.supabase.co',
-    anonKey:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kd2N0bWxhd2liaGFjbHB0c2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODAwNzQsImV4cCI6MjA5MDM1NjA3NH0.dOeKNq31KMit-x3G5AdpyyFdvd5-1fAer3gei18av1U',
+    anonKey: 'REPLACE_WITH_SUPABASE_ANON_KEY',
   },
   authServiceUrl: 'https://YOUR_RAILWAY_AUTH_SERVICE_URL',
   auth0: {

@@ -47,6 +47,13 @@ export class InviteComponent {
     this.isLoading.set(true);
 
     try {
+      // CR-08: require authenticated user before any DB write
+      const createdBy = this.authService.currentUser()?.id ?? null;
+      if (!createdBy) {
+        this.error.set('You must be signed in to generate an invite link.');
+        return;
+      }
+
       const token = crypto.randomUUID();
       const orgId = this.organizationService.selectedOrganization()?.id;
 
@@ -54,10 +61,7 @@ export class InviteComponent {
         this.error.set('No organization selected. Please complete onboarding first.');
         return;
       }
-
-      const createdBy = this.authService.currentUser()?.id ?? null;
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-
       const { error: dbError } = await this.supabaseService.client
         .from('org_invites')
         .insert({

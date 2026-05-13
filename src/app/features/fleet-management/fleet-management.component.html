@@ -62,7 +62,7 @@
                   mat-icon-button
                   class="action-btn"
                   [attr.aria-label]="'Edit ' + (vehicle.nickname ?? 'vehicle')"
-                  (click)="openAddVehicleDialog()"
+                  (click)="openEditVehicleDialog(vehicle)"
                 >
                   <mat-icon>edit</mat-icon>
                 </button>
