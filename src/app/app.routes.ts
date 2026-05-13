@@ -63,6 +63,14 @@ export const routes: Routes = [
             title: 'Create Fleet — VitalsDrive',
           },
           {
+            path: 'vehicle',
+            loadComponent: () =>
+              import('./pages/onboarding/vehicle/onboarding-vehicle.component').then(
+                (m) => m.OnboardingVehicleComponent,
+              ),
+            title: 'Add Your First Vehicle — VitalsDrive',
+          },
+          {
             path: 'complete',
             loadComponent: () =>
               import('./pages/onboarding/complete/onboarding-complete.component').then(
@@ -183,6 +191,15 @@ export const routes: Routes = [
           ),
         canActivate: [onboardingGuard],
         title: 'Fleet Management — VitalsDrive',
+      },
+      {
+        path: 'settings/invite',
+        loadComponent: () =>
+          import('./features/settings/invite/invite.component').then(
+            (m) => m.InviteComponent,
+          ),
+        canActivate: [onboardingGuard],
+        title: 'Invite Members — VitalsDrive',
       },
       {
         path: '',
