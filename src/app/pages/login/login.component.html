@@ -17,19 +17,15 @@
       </div>
     }
 
-    <!-- Form -->
-    <form
-      class="login-form"
-      (ngSubmit)="onSubmit()"
-      novalidate
-      aria-label="Login form"
-    >
+    <!-- Sign In -->
+    <div class="login-form">
       <button
         mat-raised-button
         color="primary"
-        type="submit"
+        type="button"
         class="login-btn"
         [disabled]="isLoading()"
+        (click)="onSubmit()"
         aria-label="Sign in with Auth0"
       >
         @if (isLoading()) {
@@ -38,7 +34,7 @@
           Sign In with Auth0
         }
       </button>
-    </form>
+    </div>
 
     <p class="login-footer text-secondary text-sm">
       Don't have an account? <a routerLink="/signup">Create one</a>
