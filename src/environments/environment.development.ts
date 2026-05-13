@@ -1,3 +1,6 @@
+// SECURITY: Do not commit real Supabase anon keys to source control.
+// Development keys are lower risk but should still be rotated if exposed.
+// Use .env.local or environment injection for production builds.
 export const environment = {
   production: false,
   supabase: {
