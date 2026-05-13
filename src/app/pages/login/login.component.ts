@@ -30,21 +30,12 @@ export class LoginComponent {
 
   async onSubmit(): Promise<void> {
     this.error.set(null);
-
+    // loginWithRedirect() navigates the browser to Auth0 — nothing runs after this.
+    // Token exchange and navigation happen in AuthService.initializeAfterAuth0()
+    // once Auth0 redirects back to window.location.origin.
     const result = await this.auth.signIn();
-
-    if (result.user) {
-      await this.auth.initializeUserState();
-    } else if (result.error) {
-      this.error.set(result.error.message ?? "Login failed");
-      return;
-    }
-
-    const state = await this.auth.initializeUserState();
-    if (state.hasOrganization && state.hasFleet) {
-      this.router.navigate(["/dashboard"]);
-    } else {
-      this.router.navigate(["/onboarding"]);
+    if (result.error) {
+      this.error.set(result.error.message ?? 'Login failed');
     }
   }
 

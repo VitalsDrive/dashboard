@@ -3,7 +3,7 @@ import { takeUntilDestroyed, toSignal } from "@angular/core/rxjs-interop";
 import { Router } from "@angular/router";
 import { AuthService as Auth0Service, User } from "@auth0/auth0-angular";
 import { HttpClient } from "@angular/common/http";
-import { firstValueFrom, catchError, of } from "rxjs";
+import { firstValueFrom, catchError, of, filter } from "rxjs";
 import { environment } from "../../../environments/environment";
 import { SupabaseService } from "./supabase.service";
 
@@ -46,8 +46,10 @@ export class AuthService {
   // Access token is stored in memory only — never persisted to localStorage (CR-03).
   private internalToken: string | null = null;
 
+  // Auth0 SDK loading state — true while processing the callback redirect
+  readonly isAuth0Loading = toSignal(this.auth0.isLoading$, { initialValue: true });
+
   // isAuthenticated: real boolean signal backed by Auth0 Observable (D-08)
-  // Fix: replaces broken computed(() => firstValueFrom(...)) which returned a Promise
   readonly isAuthenticated = toSignal(this.auth0.isAuthenticated$, { initialValue: false });
 
   readonly isLoading = signal(false);
@@ -69,16 +71,37 @@ export class AuthService {
   readonly isAllowlisted = signal(false);
   readonly isAdmin = signal(false);
   readonly isOwner = signal(false);
+  // Set to true once initializeAfterAuth0() completes — guards wait on this
+  readonly isInitialized = signal(false);
 
   constructor() {
     this.auth0.user$.pipe(takeUntilDestroyed()).subscribe({
-      next: (user) => {
-        this.auth0User.set(user ?? null);
-      },
-      error: () => {
-        this.auth0User.set(null);
-      },
+      next: (user) => this.auth0User.set(user ?? null),
+      error: () => this.auth0User.set(null),
     });
+
+    // After Auth0 callback completes (or on page load when already authenticated),
+    // exchange the Auth0 token for a VD JWT and initialize app state.
+    this.auth0.isAuthenticated$.pipe(
+      takeUntilDestroyed(),
+      filter(Boolean),
+    ).subscribe(() => this.initializeAfterAuth0());
+  }
+
+  private async initializeAfterAuth0(): Promise<void> {
+    if (this.internalToken) return; // already initialized this session
+    try {
+      const auth0Token = await firstValueFrom(this.auth0.getAccessTokenSilently());
+      await this.exchangeToken(auth0Token);
+      // Set VD JWT on Supabase client so RLS (auth.jwt()->>'sub') resolves correctly
+      this.supabaseService.setAccessToken(this.internalToken);
+      await this.initializeUserState();
+      await this.checkUserRoles();
+    } catch (err) {
+      console.error('Auth initialization failed:', err);
+    } finally {
+      this.isInitialized.set(true);
+    }
   }
 
   async signIn(): Promise<{ user: MockUser; error: any }> {
@@ -135,6 +158,7 @@ export class AuthService {
 
   async signOut(): Promise<{ error: any }> {
     this.internalToken = null;
+    this.supabaseService.setAccessToken(null);
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_KEY);
 

@@ -8,9 +8,18 @@ const waitForAuth = async (auth: AuthService): Promise<void> => {
   const TIMEOUT_MS = 5000;
   const POLL_MS = 50;
   let elapsed = 0;
-  while (auth.isLoading() && elapsed < TIMEOUT_MS) {
+  // Phase 1: wait for Auth0 SDK to finish processing the callback redirect
+  while ((auth.isAuth0Loading() || auth.isLoading()) && elapsed < TIMEOUT_MS) {
     await new Promise(resolve => setTimeout(resolve, POLL_MS));
     elapsed += POLL_MS;
+  }
+  // Phase 2: if authenticated, wait for token exchange + state init to complete
+  if (auth.isAuthenticated()) {
+    elapsed = 0;
+    while (!auth.isInitialized() && elapsed < TIMEOUT_MS) {
+      await new Promise(resolve => setTimeout(resolve, POLL_MS));
+      elapsed += POLL_MS;
+    }
   }
 };
 

@@ -1,59 +1,46 @@
-import { Injectable, signal, computed } from "@angular/core";
-import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
-import { environment } from "../../../environments/environment.development";
+import { Injectable } from "@angular/core";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { environment } from "../../../environments/environment";
 
 @Injectable({ providedIn: "root" })
 export class SupabaseService {
-  private readonly _client: SupabaseClient;
-
-  readonly currentUser = signal<User | null>(null);
-  readonly isLoading = signal(true);
-  readonly isAuthenticated = computed(() => this.currentUser() !== null);
+  // Base client (anon key only — used before auth)
+  private readonly _anonClient: SupabaseClient;
+  // Authenticated client (JWT in Authorization header — used after token exchange)
+  private _authedClient: SupabaseClient | null = null;
 
   constructor() {
-    this._client = createClient(
+    this._anonClient = createClient(
       environment.supabase.url,
       environment.supabase.anonKey,
       {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-        },
-        realtime: {
-          params: {
-            apikey: environment.supabase.anonKey,
-          },
-        },
+        auth: { persistSession: false, autoRefreshToken: false },
+        realtime: { params: { apikey: environment.supabase.anonKey } },
       },
     );
-
-    this.initializeAuth();
   }
 
-  private async initializeAuth(): Promise<void> {
-    try {
-      const { data } = await this._client.auth.getSession();
-      if (data?.session?.user) {
-        this.currentUser.set(data.session.user);
-      }
-    } finally {
-      this.isLoading.set(false);
+  /**
+   * Called by AuthService after VD JWT exchange.
+   * Creates an authenticated Supabase client that passes the JWT as
+   * Authorization header so RLS policies (auth.jwt()->>'sub') resolve correctly.
+   */
+  setAccessToken(token: string | null): void {
+    if (token) {
+      this._authedClient = createClient(
+        environment.supabase.url,
+        environment.supabase.anonKey,
+        {
+          global: { headers: { Authorization: `Bearer ${token}` } },
+          auth: { persistSession: false, autoRefreshToken: false },
+        },
+      );
+    } else {
+      this._authedClient = null;
     }
-
-    this._client.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        this.currentUser.set(session.user);
-      } else if (event === "SIGNED_OUT") {
-        this.currentUser.set(null);
-      }
-    });
-  }
-
-  getClient(): SupabaseClient {
-    return this._client;
   }
 
   get client(): SupabaseClient {
-    return this._client;
+    return this._authedClient ?? this._anonClient;
   }
 }
