@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, authGuardChild, allowlistGuard, onboardingGuard, onboardingStepGuard } from './core/guards/auth.guard';
+import { authGuard, authGuardChild, onboardingGuard, onboardingStepGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
 
 export const routes: Routes = [
@@ -78,7 +78,7 @@ export const routes: Routes = [
           import('./pages/dashboard/dashboard.component').then(
             (m) => m.DashboardComponent,
           ),
-        canActivate: [allowlistGuard, onboardingGuard],
+        canActivate: [onboardingGuard],
         title: 'Fleet Dashboard — VitalsDrive',
       },
       {
@@ -87,7 +87,7 @@ export const routes: Routes = [
           import('./pages/fleet-map/fleet-map.component').then(
             (m) => m.FleetMapComponent,
           ),
-        canActivate: [allowlistGuard, onboardingGuard],
+        canActivate: [onboardingGuard],
         title: 'Fleet Map — VitalsDrive',
       },
       {
@@ -96,7 +96,7 @@ export const routes: Routes = [
           import('./pages/vehicle-detail/vehicle-detail.component').then(
             (m) => m.VehicleDetailComponent,
           ),
-        canActivate: [allowlistGuard, onboardingGuard],
+        canActivate: [onboardingGuard],
         title: 'Vehicle Details — VitalsDrive',
       },
       {
@@ -105,12 +105,12 @@ export const routes: Routes = [
           import('./pages/alerts/alerts.component').then(
             (m) => m.AlertsComponent,
           ),
-        canActivate: [allowlistGuard, onboardingGuard],
+        canActivate: [onboardingGuard],
         title: 'Active Alerts — VitalsDrive',
       },
       {
         path: 'backoffice',
-        canActivate: [allowlistGuard, onboardingGuard, adminGuard],
+        canActivate: [onboardingGuard, adminGuard],
         children: [
           {
             path: '',

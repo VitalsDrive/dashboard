@@ -32,30 +32,10 @@ export const authGuard: CanActivateFn = authCheck;
 export const authGuardChild: CanActivateChildFn = authCheck;
 
 /**
- * allowlistGuard — ensures user has organization membership.
- * Redirects to /onboarding if user has no org or incomplete setup.
- * This guard is now equivalent to onboardingGuard (allowlist concept was replaced by org membership).
- * Kept for backwards compatibility - consider removing and using onboardingGuard only.
- */
-export const allowlistGuard: CanActivateFn = async () => {
-  const auth = inject(AuthService);
-  const router = inject(Router);
-
-  while (auth.isLoading()) {
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
-
-  if (!auth.isAllowlisted()) {
-    return router.createUrlTree(['/onboarding']);
-  }
-
-  return true;
-};
-
-/**
- * onboardingGuard — ensures user has completed onboarding.
- * Redirects to /onboarding if org/fleet setup is incomplete.
+ * onboardingGuard — ensures user has completed onboarding (org + fleet setup).
+ * Redirects to /onboarding if setup is incomplete.
  * Should be used after authGuard.
+ * Replaces allowlistGuard (D-13).
  */
 export const onboardingGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);

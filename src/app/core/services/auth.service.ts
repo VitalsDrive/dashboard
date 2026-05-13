@@ -1,13 +1,17 @@
-import { Injectable, signal, computed, inject, effect } from "@angular/core";
-import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { Injectable, signal, computed, inject } from "@angular/core";
+import { takeUntilDestroyed, toSignal } from "@angular/core/rxjs-interop";
 import { Router } from "@angular/router";
 import { AuthService as Auth0Service, User } from "@auth0/auth0-angular";
-import { firstValueFrom } from "rxjs";
+import { HttpClient } from "@angular/common/http";
+import { firstValueFrom, catchError, of } from "rxjs";
+import { environment } from "../../../environments/environment.development";
+import { SupabaseService } from "./supabase.service";
 
 export interface MockUser {
   id: string;
   email: string;
   role: string;
+  roles?: string[];
 }
 
 export interface UserState {
@@ -24,11 +28,26 @@ export interface ExchangeResponse {
   user: MockUser;
 }
 
+export interface MeResponse {
+  sub: string;
+  email: string;
+}
+
 @Injectable({ providedIn: "root" })
 export class AuthService {
   private readonly router = inject(Router);
   private readonly auth0 = inject(Auth0Service);
-  private internalToken: string | null = null;
+  private readonly http = inject(HttpClient);
+  private readonly supabaseService = inject(SupabaseService);
+
+  private readonly TOKEN_KEY = 'vd_access_token';
+  private readonly REFRESH_KEY = 'vd_refresh_token';
+
+  private internalToken: string | null = localStorage.getItem('vd_access_token');
+
+  // isAuthenticated: real boolean signal backed by Auth0 Observable (D-08)
+  // Fix: replaces broken computed(() => firstValueFrom(...)) which returned a Promise
+  readonly isAuthenticated = toSignal(this.auth0.isAuthenticated$, { initialValue: false });
 
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
@@ -41,11 +60,8 @@ export class AuthService {
       id: user.sub || "",
       email: user.email || user.name || "",
       role: "admin",
+      roles: (user as any)['https://vitalsdrive.com/roles'] ?? [],
     };
-  });
-
-  readonly isAuthenticated = computed(() => {
-    return firstValueFrom(this.auth0.isAuthenticated$);
   });
 
   readonly isOnboardingComplete = signal(false);
@@ -54,8 +70,7 @@ export class AuthService {
   readonly isOwner = signal(false);
 
   constructor() {
-    const user$ = this.auth0.user$;
-    user$.pipe(takeUntilDestroyed()).subscribe({
+    this.auth0.user$.pipe(takeUntilDestroyed()).subscribe({
       next: (user) => {
         this.auth0User.set(user ?? null);
       },
@@ -71,11 +86,10 @@ export class AuthService {
 
     try {
       await firstValueFrom(this.auth0.loginWithRedirect());
-      
-      // Get Auth0 token and exchange it with auth-service
+
       const auth0Token = await firstValueFrom(this.auth0.getAccessTokenSilently());
       await this.exchangeToken(auth0Token);
-      
+
       return { user: this.currentUser()!, error: null };
     } catch (err: any) {
       this.error.set(err.message || "Sign in failed");
@@ -84,42 +98,45 @@ export class AuthService {
     }
   }
 
-  private async exchangeToken(auth0Token: string): Promise<void> {
-    try {
-      const response = await fetch('http://localhost:3001/auth/exchange', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ auth0Token }),
-      });
+  async exchangeToken(auth0Token: string): Promise<void> {
+    const data = await firstValueFrom(
+      this.http.post<ExchangeResponse>(
+        `${environment.authServiceUrl}/auth/exchange`,
+        { auth0Token },
+      )
+    );
 
-      if (!response.ok) {
-        throw new Error('Token exchange failed');
-      }
+    this.internalToken = data.accessToken;
+    localStorage.setItem(this.TOKEN_KEY, data.accessToken);
+    localStorage.setItem(this.REFRESH_KEY, data.refreshToken);
+  }
 
-      const data: ExchangeResponse = await response.json();
-      this.internalToken = data.accessToken;
-      console.log('Token exchanged successfully');
-    } catch (err) {
-      console.error('Failed to exchange token:', err);
-      throw err;
+  async refreshTokens(): Promise<void> {
+    const storedRefresh = localStorage.getItem(this.REFRESH_KEY);
+    if (!storedRefresh) {
+      throw new Error('No refresh token available');
     }
+
+    const data = await firstValueFrom(
+      this.http.post<{ accessToken: string }>(
+        `${environment.authServiceUrl}/auth/refresh`,
+        { refreshToken: storedRefresh },
+      )
+    );
+
+    this.internalToken = data.accessToken;
+    localStorage.setItem(this.TOKEN_KEY, data.accessToken);
   }
 
-  async signUp(): Promise<{ user: MockUser; error: any }> {
-    return this.signIn();
-  }
-
-  async signInWithGoogle(): Promise<{ user: MockUser; error: any }> {
-    return this.signIn();
+  getInternalToken(): string | null {
+    return this.internalToken;
   }
 
   async getToken(): Promise<string | null> {
-    // Return internal token if available, otherwise try to get Auth0 token
     if (this.internalToken) {
       return this.internalToken;
     }
-    
-    // If no internal token, try to exchange the Auth0 token
+
     try {
       const auth0Token = await firstValueFrom(this.auth0.getAccessTokenSilently());
       await this.exchangeToken(auth0Token);
@@ -130,12 +147,11 @@ export class AuthService {
     }
   }
 
-  getInternalToken(): string | null {
-    return this.internalToken;
-  }
-
   async signOut(): Promise<{ error: any }> {
     this.internalToken = null;
+    localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem(this.REFRESH_KEY);
+
     this.isOnboardingComplete.set(false);
     this.isAllowlisted.set(false);
     this.isAdmin.set(false);
@@ -165,23 +181,106 @@ export class AuthService {
   }
 
   async initializeUserState(): Promise<UserState> {
-    const user = this.currentUser();
-    const state: UserState = {
-      isAllowlisted: true,
-      isOnboardingComplete: true,
-      hasOrganization: true,
-      hasFleet: true,
-      organizationId: "mock-org-1",
-    };
+    // D-07: validate stored JWT against auth-service before any Supabase queries
+    const storedToken = localStorage.getItem(this.TOKEN_KEY);
+    if (storedToken) {
+      try {
+        const me = await firstValueFrom(
+          this.http.get<MeResponse>(
+            `${environment.authServiceUrl}/auth/me`,
+            { headers: { Authorization: `Bearer ${storedToken}` } }
+          ).pipe(
+            catchError(() => {
+              // 401 or network error — clear stored tokens
+              this.signOut();
+              return of(null);
+            })
+          )
+        );
 
-    this.isAllowlisted.set(state.isAllowlisted);
-    this.isOnboardingComplete.set(state.isOnboardingComplete);
-    return state;
+        if (!me) {
+          // Token invalid — signed out, stop initialization
+          return {
+            isAllowlisted: false,
+            isOnboardingComplete: false,
+            hasOrganization: false,
+            hasFleet: false,
+            organizationId: null,
+          };
+        }
+      } catch {
+        await this.signOut();
+        return {
+          isAllowlisted: false,
+          isOnboardingComplete: false,
+          hasOrganization: false,
+          hasFleet: false,
+          organizationId: null,
+        };
+      }
+    }
+
+    const user = this.currentUser();
+    if (!user) {
+      return {
+        isAllowlisted: false,
+        isOnboardingComplete: false,
+        hasOrganization: false,
+        hasFleet: false,
+        organizationId: null,
+      };
+    }
+
+    // D-10: query fleet_members for organization membership (user_id is TEXT = Auth0 sub)
+    const { data: membership, error: memberError } = await this.supabaseService.client
+      .from('fleet_members')
+      .select('organization_id, role')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (memberError) {
+      console.error('Failed to load fleet membership:', memberError);
+    }
+
+    const hasOrganization = !!membership?.organization_id;
+    const organizationId = membership?.organization_id ?? null;
+
+    let hasFleet = false;
+
+    // D-11: query fleets count for the organization
+    if (hasOrganization && organizationId) {
+      const { count, error: fleetError } = await this.supabaseService.client
+        .from('fleets')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
+      if (fleetError) {
+        console.error('Failed to load fleet count:', fleetError);
+      } else {
+        hasFleet = (count ?? 0) > 0;
+      }
+    }
+
+    const isOnboardingComplete = hasOrganization && hasFleet;
+
+    this.isAllowlisted.set(hasOrganization);
+    this.isOnboardingComplete.set(isOnboardingComplete);
+
+    return {
+      isAllowlisted: hasOrganization,
+      isOnboardingComplete,
+      hasOrganization,
+      hasFleet,
+      organizationId,
+    };
   }
 
   async checkUserRoles(): Promise<void> {
-    this.isAdmin.set(true);
-    this.isOwner.set(true);
+    const user = this.currentUser();
+    const roles: string[] = user?.roles ?? [];
+    this.isOwner.set(roles.includes('owner'));
+    this.isAdmin.set(roles.includes('admin') || roles.includes('owner'));
   }
 
   navigateToDashboard(): void {
@@ -206,5 +305,13 @@ export class AuthService {
     await this.initializeUserState();
     await this.checkUserRoles();
     return { success: true, error: null };
+  }
+
+  async signUp(): Promise<{ user: MockUser; error: any }> {
+    return this.signIn();
+  }
+
+  async signInWithGoogle(): Promise<{ user: MockUser; error: any }> {
+    return this.signIn();
   }
 }
