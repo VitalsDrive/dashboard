@@ -176,6 +176,15 @@ export const routes: Routes = [
         ],
       },
       {
+        path: 'fleet-management',
+        loadComponent: () =>
+          import('./features/fleet-management/fleet-management.component').then(
+            (m) => m.FleetManagementComponent,
+          ),
+        canActivate: [onboardingGuard],
+        title: 'Fleet Management — VitalsDrive',
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full',

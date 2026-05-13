@@ -1,0 +1,96 @@
+<div class="fm-page" role="main">
+  <!-- Page Header -->
+  <div class="fm-header">
+    <h1 class="fm-title">Fleet Management</h1>
+    <button mat-raised-button class="vd-btn-primary" (click)="openAddVehicleDialog()">
+      <mat-icon>add</mat-icon>
+      + Add Vehicle
+    </button>
+  </div>
+
+  <!-- Fleet Switcher -->
+  <div class="fm-switcher">
+    <mat-form-field appearance="outline" class="fleet-select-field">
+      <mat-label>Fleet</mat-label>
+      <mat-select [value]="selectedFleetId()" (selectionChange)="onFleetChange($event.value)">
+        <mat-option [value]="null">All Fleets</mat-option>
+        @for (fleet of fleets(); track fleet.id) {
+          <mat-option [value]="fleet.id">{{ fleet.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  @if (error()) {
+    <div class="error-banner" role="alert">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  <!-- Loading -->
+  @if (isLoading()) {
+    <div class="fm-loading" aria-label="Loading vehicles…">
+      <mat-progress-spinner mode="indeterminate" diameter="48" />
+    </div>
+  }
+
+  <!-- Empty State -->
+  @if (!isLoading() && vehicles().length === 0) {
+    <div class="fm-empty-state">
+      <mat-icon class="empty-icon">directions_car</mat-icon>
+      <h2 class="empty-heading">No vehicles yet</h2>
+      <p class="empty-body">Add your first vehicle to start monitoring fleet health.</p>
+      <button mat-raised-button class="vd-btn-primary" (click)="openAddVehicleDialog()">
+        <mat-icon>add</mat-icon>
+        + Add Vehicle
+      </button>
+    </div>
+  }
+
+  <!-- Vehicle Grid -->
+  @if (!isLoading() && vehicles().length > 0) {
+    <div class="vehicle-grid">
+      @for (vehicle of vehicles(); track vehicle.id) {
+        <div class="vehicle-card">
+          <div class="vehicle-card__accent"></div>
+          <div class="vehicle-card__body">
+            <div class="vehicle-card__header">
+              <h3 class="vehicle-nickname">{{ vehicle.nickname ?? '—' }}</h3>
+              <div class="vehicle-actions">
+                <button
+                  mat-icon-button
+                  class="action-btn"
+                  [attr.aria-label]="'Edit ' + (vehicle.nickname ?? 'vehicle')"
+                  (click)="openAddVehicleDialog()"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  class="action-btn action-btn--remove"
+                  [attr.aria-label]="'Remove ' + (vehicle.nickname ?? 'vehicle')"
+                  (click)="openRemoveDialog(vehicle)"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <p class="vehicle-meta">
+              {{ vehicle.make ?? '' }}
+              @if (vehicle.make && vehicle.model) { {{ vehicle.model }} }
+              @if (vehicle.year) { · {{ vehicle.year }} }
+            </p>
+
+            @if (vehicle.license_plate) {
+              <span class="plate-badge">{{ vehicle.license_plate }}</span>
+            }
+
+            <p class="vehicle-fleet-label">{{ getFleetName(vehicle.fleet_id) }}</p>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
