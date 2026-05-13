@@ -121,7 +121,7 @@ export class JoinComponent implements OnInit {
     this.isLoading.set(false);
 
     setTimeout(() => {
-      this.router.navigate(['/onboarding/org']);
+      this.router.navigate(['/onboarding/organization']);
     }, 1500);
   }
 }
