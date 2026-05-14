@@ -10,10 +10,13 @@ import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AlertService } from '../../core/services/alert.service';
-import { Alert, AlertType } from '../../core/models/alert.model';
+import { SupabaseAlert } from '../../core/models/alert.model';
 
-type FilterType = 'all' | AlertType;
+type AlertFilter = 'all' | 'critical' | 'warning' | 'acknowledged';
 
 @Component({
   selector: 'app-alerts',
@@ -26,41 +29,57 @@ type FilterType = 'all' | AlertType;
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
+    MatPaginatorModule,
+    MatBadgeModule,
+    MatProgressSpinnerModule,
   ],
 })
 export class AlertsComponent {
   private readonly alertService = inject(AlertService);
 
-  readonly filterType = signal<FilterType>('all');
+  readonly PAGE_SIZE = 25;
+  readonly currentPage = signal(0);
+  readonly activeFilter = signal<AlertFilter>('all');
 
-  readonly activeAlerts = this.alertService.activeAlerts;
-
-  readonly filteredAlerts = computed(() => {
-    const filter = this.filterType();
-    const alerts = this.activeAlerts();
-    if (filter === 'all') return alerts;
-    return alerts.filter((a) => a.type === filter);
-  });
-
-  readonly hasAlerts = computed(() => this.activeAlerts().length > 0);
-
-  readonly filterOptions: { label: string; value: FilterType; count: () => number }[] = [
-    { label: 'All', value: 'all', count: this.alertService.activeAlertCount },
-    { label: 'DTC', value: 'dtc', count: computed(() => this.alertService.dtcAlerts().length) },
-    { label: 'Battery', value: 'battery', count: computed(() => this.alertService.batteryAlerts().length) },
-    { label: 'Coolant', value: 'coolant', count: computed(() => this.alertService.coolantAlerts().length) },
+  readonly filterChips: { label: string; value: AlertFilter }[] = [
+    { label: 'All', value: 'all' },
+    { label: 'Critical', value: 'critical' },
+    { label: 'Warning', value: 'warning' },
+    { label: 'Acknowledged', value: 'acknowledged' },
   ];
 
-  setFilter(type: FilterType): void {
-    this.filterType.set(type);
+  readonly allAlerts = this.alertService.dbAlerts;
+  readonly unacknowledgedCount = this.alertService.unacknowledgedCount;
+  readonly alertResource = this.alertService.alertResource;
+
+  readonly filteredAlerts = computed(() => {
+    const filter = this.activeFilter();
+    const all = this.allAlerts();
+    if (filter === 'all') return all;
+    if (filter === 'critical') return all.filter((a) => a.severity === 'critical');
+    if (filter === 'warning') return all.filter((a) => a.severity === 'warning');
+    if (filter === 'acknowledged') return all.filter((a) => a.acknowledged);
+    return all;
+  });
+
+  readonly totalCount = computed(() => this.filteredAlerts().length);
+
+  readonly pagedAlerts = computed(() => {
+    const from = this.currentPage() * this.PAGE_SIZE;
+    return this.filteredAlerts().slice(from, from + this.PAGE_SIZE);
+  });
+
+  onPageChange(event: PageEvent): void {
+    this.currentPage.set(event.pageIndex);
   }
 
-  dismiss(alert: Alert): void {
-    this.alertService.dismissAlert(alert.id);
+  setFilter(filter: AlertFilter): void {
+    this.activeFilter.set(filter);
+    this.currentPage.set(0);
   }
 
-  clearAll(): void {
-    this.alertService.clearAllAlerts();
+  async acknowledge(alert: SupabaseAlert): Promise<void> {
+    await this.alertService.acknowledgeAlert(alert.id);
   }
 
   getSeverityIcon(severity: string): string {
