@@ -6,6 +6,7 @@ module.exports = {
   moduleFileExtensions: ['ts', 'js'],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
+      isolatedModules: true,
       tsconfig: {
         rootDir: '.',
         strict: false,
