@@ -49,6 +49,7 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
   private map: L.Map | null = null;
   private markerMap = new Map<string, VehicleMarkerData>();
   private updateTimeout: ReturnType<typeof setTimeout> | null = null;
+  private resizeObserver: ResizeObserver | null = null;
   private initialFitDone = false;
 
   readonly selectedVehicleId = signal<string | null>(null);
@@ -74,9 +75,17 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.initMap();
+    // ResizeObserver fires when the container reaches its actual rendered size —
+    // more reliable than setTimeout since Angular's flex layout finalizes asynchronously.
+    const container = document.getElementById('fleet-map');
+    if (container) {
+      this.resizeObserver = new ResizeObserver(() => this.map?.invalidateSize());
+      this.resizeObserver.observe(container);
+    }
   }
 
   ngOnDestroy(): void {
+    this.resizeObserver?.disconnect();
     if (this.updateTimeout) clearTimeout(this.updateTimeout);
     this.map?.remove();
   }
@@ -88,8 +97,8 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
       zoomControl: true,
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
       maxZoom: 19,
     }).addTo(this.map);
 

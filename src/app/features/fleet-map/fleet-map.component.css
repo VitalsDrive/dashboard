@@ -33,12 +33,12 @@
 }
 
 /* Marker animations */
-:global(.map-marker) {
+::ng-deep .map-marker {
   cursor: pointer;
   transform-origin: center;
 }
 
-:global(.map-marker.pulse) {
+::ng-deep .map-marker.pulse {
   animation: pulse-ring 1.5s ease-in-out infinite;
 }
 

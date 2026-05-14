@@ -3,6 +3,7 @@
    Import order matters: tokens → reset → typography → etc.
    ============================================================ */
 
+@import 'leaflet/dist/leaflet.css';
 @import './styles/_fonts.css';
 @import './styles/tokens.css';
 @import './styles/_bridge.css';
