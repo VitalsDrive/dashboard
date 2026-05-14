@@ -1,7 +1,10 @@
-import { Injectable, computed, signal } from '@angular/core';
-import { Alert, AlertSeverity, AlertStatus, AlertType } from '../models/alert.model';
+import { Injectable, OnDestroy, computed, effect, inject, resource, signal } from '@angular/core';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import { Alert, AlertSeverity, AlertStatus, AlertType, ALERT_AUTO_DISMISS, SupabaseAlert } from '../models/alert.model';
 import { TelemetryRecord } from '../models/telemetry.model';
 import { DtcTranslationService } from './dtc-translation.service';
+import { FleetService } from './fleet.service';
+import { SupabaseService } from './supabase.service';
 
 /** Critical DTC codes that escalate to critical severity */
 const CRITICAL_DTC_CODES = new Set(['P0300', 'P0325', 'P0335', 'P0562', 'P0600', 'P2120', 'P2135', 'P0700', 'P0730']);
@@ -12,14 +15,16 @@ function generateId(): string {
 }
 
 @Injectable({ providedIn: 'root' })
-export class AlertService {
+export class AlertService implements OnDestroy {
   private readonly dtcService = new DtcTranslationService();
+  private readonly supabase = inject(SupabaseService);
+  private readonly fleetService = inject(FleetService);
+
+  // === In-memory alert stream (kept for ToastComponent + HeaderComponent compat) ===
 
   private readonly _alerts = signal<Alert[]>([]);
   /** Rolling history of battery voltage per vehicle: vehicleId → last 10 readings */
   private readonly voltageHistory = new Map<string, number[]>();
-
-  // === Public computed slices ===
 
   readonly alerts = this._alerts.asReadonly();
 
@@ -44,13 +49,105 @@ export class AlertService {
   );
 
   readonly activeAlertCount = computed(() => this.activeAlerts().length);
-
   readonly criticalAlertCount = computed(() => this.criticalAlerts().length);
 
-  // === Alert processing ===
+  // === Supabase-backed DB alert layer ===
+
+  private readonly _dbAlerts = signal<SupabaseAlert[]>([]);
+  readonly dbAlerts = this._dbAlerts.asReadonly();
+
+  readonly activeDbAlerts = computed(() =>
+    this._dbAlerts().filter((a) => !a.acknowledged),
+  );
+
+  readonly unacknowledgedCount = computed(() => this.activeDbAlerts().length);
+
+  // === alertResource: loads last 7 days of alerts for user's fleets ===
+
+  readonly alertResource = resource({
+    params: () => {
+      const fleetIds = this.fleetService.fleets().map((f) => f.id);
+      return fleetIds.length > 0 ? { fleetIds } : undefined;
+    },
+    loader: async ({ params: { fleetIds } }: { params: { fleetIds: string[] } }) => {
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await this.supabase.client
+        .from('alerts')
+        .select('*', { count: 'exact' })
+        .in('fleet_id', fleetIds)
+        .gte('created_at', since)
+        .order('acknowledged', { ascending: true })
+        .order('created_at', { ascending: false })
+        .range(0, 199);
+      if (error) throw error;
+      this._dbAlerts.set((data ?? []) as SupabaseAlert[]);
+      return data;
+    },
+    defaultValue: [],
+  });
+
+  // === Realtime subscription ===
+
+  private alertChannel: RealtimeChannel | null = null;
+  private alertSubscribed = false;
+
+  constructor() {
+    // effect() bridge: start Realtime subscription once alertResource resolves
+    effect(() => {
+      if (this.alertResource.status() === 'resolved' && !this.alertSubscribed) {
+        this.alertSubscribed = true;
+        const fleetIds = this.fleetService.fleets().map((f) => f.id);
+        this.subscribeToAlerts(fleetIds);
+      }
+    });
+  }
+
+  subscribeToAlerts(fleetIds: string[]): void {
+    if (this.alertChannel) return;
+    this.alertChannel = this.supabase.client
+      .channel('alerts-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'alerts' },
+        (payload: { new: unknown }) => {
+          const alert = payload.new as SupabaseAlert;
+          // T-04-07: filter to own fleets only (RLS is backstop)
+          if (fleetIds.includes(alert.fleet_id)) {
+            this._dbAlerts.update((alerts) => [alert, ...alerts]);
+            // Push in-memory Alert so ToastComponent fires (COOL-02 / BATT-02)
+            this.pushAlertFromDb(alert);
+          }
+        },
+      )
+      .subscribe();
+  }
+
+  // === acknowledgeAlert: direct Supabase UPDATE + optimistic signal flip ===
+
+  async acknowledgeAlert(alertId: number): Promise<void> {
+    const { error } = await this.supabase.client
+      .from('alerts')
+      .update({ acknowledged: true, acknowledged_at: new Date().toISOString() })
+      .eq('id', alertId);
+    if (error) throw error;
+    // Optimistic update — do NOT write acknowledged_by (UUID FK incompatible with Auth0 TEXT sub)
+    this._dbAlerts.update((alerts) =>
+      alerts.map((a) => (a.id === alertId ? { ...a, acknowledged: true } : a)),
+    );
+  }
+
+  ngOnDestroy(): void {
+    if (this.alertChannel) {
+      this.supabase.client.removeChannel(this.alertChannel);
+    }
+  }
+
+  // === In-memory alert operations (kept for ToastComponent / legacy compat) ===
 
   /**
    * Process a new telemetry record and create alerts as needed.
+   * NOTE: This method is retained as dead code after plan 04-02.
+   * The DB trigger (migration 014) owns detection; VehicleService no longer calls this.
    */
   checkAndCreateAlerts(telemetry: TelemetryRecord, vehicleName?: string): void {
     this.updateVoltageHistory(telemetry.vehicle_id, telemetry.voltage);
@@ -63,14 +160,6 @@ export class AlertService {
     this._alerts.update((alerts) =>
       alerts.map((a) =>
         a.id === alertId ? { ...a, status: 'dismissed' as AlertStatus } : a,
-      ),
-    );
-  }
-
-  acknowledgeAlert(alertId: string): void {
-    this._alerts.update((alerts) =>
-      alerts.map((a) =>
-        a.id === alertId ? { ...a, status: 'acknowledged' as AlertStatus } : a,
       ),
     );
   }
@@ -91,11 +180,9 @@ export class AlertService {
 
   /**
    * Push a connection (or other fleet-level) alert into the toast stream.
-   * Uses vehicleId 'fleet' as a non-vehicle sentinel value.
-   * Auto-dismiss: 'warning' = 12000ms, 'info' = 8000ms (per ALERT_AUTO_DISMISS).
    */
   pushAlert(message: string, severity: AlertSeverity, type: AlertType = 'connection'): void {
-    this._alerts.update(alerts => {
+    this._alerts.update((alerts) => {
       const trimmed = alerts.length >= 200 ? alerts.slice(-199) : alerts;
       const id = `alert-${Date.now()}-${++alertIdCounter}`;
       return [...trimmed, {
@@ -110,18 +197,51 @@ export class AlertService {
     });
   }
 
+  /** Expose voltage history for battery components */
+  getVoltageHistory(vehicleId: string): number[] {
+    return this.voltageHistory.get(vehicleId) ?? [];
+  }
+
   // === Private helpers ===
+
+  /**
+   * Map a SupabaseAlert row to an in-memory Alert and push it to _alerts,
+   * so the ToastComponent fires for Realtime INSERTs.
+   */
+  private pushAlertFromDb(dbAlert: SupabaseAlert): void {
+    const type: AlertType =
+      dbAlert.code?.startsWith('P') ? 'dtc' :
+      dbAlert.code?.includes('BATTERY') || dbAlert.code?.includes('BATT') ? 'battery' :
+      dbAlert.code?.includes('COOLANT') || dbAlert.code?.includes('COOL') ? 'coolant' :
+      'connection';
+
+    const autoDismiss = ALERT_AUTO_DISMISS[dbAlert.severity];
+    const alert: Alert = {
+      id: generateId(),
+      vehicleId: dbAlert.vehicle_id,
+      type,
+      severity: dbAlert.severity,
+      code: dbAlert.code,
+      message: dbAlert.message,
+      timestamp: new Date(dbAlert.created_at),
+      status: 'active',
+      metadata: autoDismiss > 0 ? { autoDismissMs: autoDismiss } : undefined,
+    };
+
+    this._alerts.update((alerts) => {
+      const trimmed = alerts.length >= 200 ? alerts.slice(-199) : alerts;
+      return [...trimmed, alert];
+    });
+  }
 
   private checkCoolantAlert(telemetry: TelemetryRecord, vehicleName?: string): void {
     const temp = telemetry.coolant_temp;
 
-    // Resolve previous coolant alerts if temp is back to normal
     if (temp <= 100) {
       this.resolveAlertsForVehicle(telemetry.vehicle_id, 'coolant');
       return;
     }
 
-    // Deduplicate: only create one active coolant alert per vehicle
     const existing = this.activeAlerts().find(
       (a) => a.type === 'coolant' && a.vehicleId === telemetry.vehicle_id,
     );
@@ -159,19 +279,16 @@ export class AlertService {
     const latest = history[history.length - 1];
     const avg = history.reduce((a, b) => a + b, 0) / history.length;
 
-    // Resolve if voltage is healthy
     if (latest >= 12.6) {
       this.resolveAlertsForVehicle(telemetry.vehicle_id, 'battery');
       return;
     }
 
-    // Deduplicate
     const existing = this.activeAlerts().find(
       (a) => a.type === 'battery' && a.vehicleId === telemetry.vehicle_id,
     );
     if (existing) return;
 
-    // Check predictive failure via linear regression
     const predictedDrop = this.predictVoltageIn2Hours(history);
     if (predictedDrop !== null && predictedDrop < 12.0) {
       this.createAlert({
@@ -250,7 +367,6 @@ export class AlertService {
 
   private createAlert(alert: Alert): void {
     this._alerts.update((alerts) => {
-      // Cap alerts at 200 total to prevent memory issues
       const trimmed = alerts.length >= 200 ? alerts.slice(-199) : alerts;
       return [...trimmed, alert];
     });
@@ -258,22 +374,12 @@ export class AlertService {
 
   private updateVoltageHistory(vehicleId: string, voltage: number): void {
     const history = this.voltageHistory.get(vehicleId) ?? [];
-    const updated = [...history, voltage].slice(-30); // keep last 30 readings
+    const updated = [...history, voltage].slice(-30);
     this.voltageHistory.set(vehicleId, updated);
   }
 
-  /** Minimum voltage samples before predictive regression is trusted. */
   private static readonly MIN_PREDICTION_SAMPLES = 15;
 
-  /**
-   * Simple linear regression to predict near-future voltage.
-   * Returns null if insufficient data.
-   *
-   * NOTE: telemetry batch cadence is not guaranteed to be 1/min, so the
-   * prediction horizon is capped relative to the sample count (extrapolate
-   * at most as far ahead as we have observed) to avoid amplifying noise
-   * from a short, noisy window into a false-positive alert.
-   */
   private predictVoltageIn2Hours(history: number[]): number | null {
     if (history.length < AlertService.MIN_PREDICTION_SAMPLES) return null;
 
@@ -292,14 +398,7 @@ export class AlertService {
     const slope = numerator / denominator;
     const intercept = yMean - slope * xMean;
 
-    // Cap extrapolation: never predict further ahead than the window we
-    // actually observed (max horizon = n readings, ceiling 120).
     const horizon = Math.min(n, 120);
     return slope * (n + horizon) + intercept;
-  }
-
-  /** Expose voltage history for battery components */
-  getVoltageHistory(vehicleId: string): number[] {
-    return this.voltageHistory.get(vehicleId) ?? [];
   }
 }

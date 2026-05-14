@@ -106,7 +106,7 @@ export class VehicleService implements OnDestroy {
         ...v,
         latestTelemetry: latest,
         healthScore: this.calculateHealthScore(latest),
-        alertCount: this.alertService.activeAlerts().filter(a => a.vehicleId === v.id).length,
+        alertCount: this.alertService.activeDbAlerts().filter(a => a.vehicle_id === v.id).length,
       };
     });
   });
@@ -307,8 +307,7 @@ export class VehicleService implements OnDestroy {
           vehicleId,
           [record, ...existing].slice(0, MAX_TELEMETRY_HISTORY),
         );
-        const vehicle = (this.vehicleResource.value() ?? []).find((v: Vehicle) => v.id === vehicleId);
-        this.alertService.checkAndCreateAlerts(record, vehicle ? getVehicleDisplayName(vehicle) : undefined);
+        // checkAndCreateAlerts removed — DB trigger (migration 014) owns detection (plan 04-02)
       });
       return newMap;
     });
