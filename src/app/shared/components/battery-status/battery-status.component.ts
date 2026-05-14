@@ -120,8 +120,9 @@ export class BatteryStatusComponent implements OnDestroy {
     // Gradient fill
     const grad = ctx.createLinearGradient(0, 0, 0, h);
     const color = this.voltageColor();
-    grad.addColorStop(0, color.replace(')', ', 0.3)').replace('var(', 'rgba(').replace(/--color-\w+/, this.resolveColor(color)));
-    grad.addColorStop(1, 'rgba(59,130,246,0)');
+    const resolvedColor = this.resolveColor(color);
+    grad.addColorStop(0, this.hexToRgba(resolvedColor, 0.3));
+    grad.addColorStop(1, this.hexToRgba(resolvedColor, 0));
 
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
@@ -131,7 +132,7 @@ export class BatteryStatusComponent implements OnDestroy {
     ctx.lineTo(points[points.length - 1].x, h);
     ctx.lineTo(points[0].x, h);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(59,130,246,0.12)';
+    ctx.fillStyle = grad;
     ctx.fill();
 
     // Line stroke
@@ -155,6 +156,13 @@ export class BatteryStatusComponent implements OnDestroy {
     ctx.lineWidth = 1;
     ctx.stroke();
     ctx.setLineDash([]);
+  }
+
+  private hexToRgba(hex: string, alpha: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
   }
 
   private resolveColor(cssVar: string): string {
