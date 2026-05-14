@@ -21,7 +21,6 @@ export class VehicleService implements OnDestroy {
   private readonly organizationService = inject(OrganizationService);
   private readonly fleetService = inject(FleetService);
   private readonly destroy$ = new Subject<void>();
-  private readonly reloadVehicles$ = new Subject<void>();
 
   // === Core State (signals) ===
 
@@ -130,13 +129,23 @@ export class VehicleService implements OnDestroy {
   // Starts realtime subscription once vehicleResource resolves.
   // Calls reloadVehicles$.next() before each new subscription to cancel prior one (WR-04).
 
+  private fleetSubscribed = false;
+
   constructor() {
+    // WR-03: keep deprecated isLoading/error signals live by mirroring
+    // vehicleResource state, so resource-driven consumers don't read stale values.
     effect(() => {
-      if (this.vehicleResource.status() === 'resolved') {
-        this.reloadVehicles$.next();
+      this.isLoading.set(this.vehicleResource.isLoading());
+      const err = this.vehicleResource.error();
+      this.error.set(err ? String((err as Error)?.message ?? err) : null);
+    });
+
+    effect(() => {
+      if (this.vehicleResource.status() === 'resolved' && !this.fleetSubscribed) {
+        this.fleetSubscribed = true;
         this.telemetryService.subscribeToFleet();
         this.telemetryService.telemetryBatch$
-          .pipe(takeUntil(this.reloadVehicles$), takeUntil(this.destroy$))
+          .pipe(takeUntil(this.destroy$))
           .subscribe(batch => this.processBatch(batch));
       }
     });
