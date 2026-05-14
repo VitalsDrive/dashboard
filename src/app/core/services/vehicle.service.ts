@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal, OnDestroy } from '@angular/core';
+import { Injectable, computed, inject, signal, OnDestroy, resource, effect } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SupabaseService } from './supabase.service';
@@ -25,30 +25,89 @@ export class VehicleService implements OnDestroy {
 
   // === Core State (signals) ===
 
-  readonly vehicles = signal<Vehicle[]>([]);
   readonly selectedVehicleId = signal<string | null>(null);
-  readonly isLoading = signal(false);
-  readonly error = signal<string | null>(null);
 
   /**
    * telemetryMap: vehicleId → array of TelemetryRecords (newest first)
    */
   readonly telemetryMap = signal<Map<string, TelemetryRecord[]>>(new Map());
 
+  // === Compatibility signals for components still using legacy API ===
+  // Writable signals so existing components that call .set() still compile.
+
+  /** @deprecated Use vehicleResource.isLoading instead */
+  readonly isLoading = signal(false);
+  /** @deprecated Use vehicleResource.error instead */
+  readonly error = signal<string | null>(null);
+  /** @deprecated Use vehicleResource.value() instead */
+  readonly vehicles = computed(() => this.vehicleResource.value() ?? []);
+
+  // === resource()-driven vehicle loading ===
+  // Params re-evaluate when selectedOrganization() or fleets() changes.
+  // Returns undefined when no org is selected or no fleets exist → loader skips → status = 'idle'.
+
+  readonly vehicleResource = resource({
+    params: () => {
+      const org = this.organizationService.selectedOrganization();
+      if (!org) return undefined;
+      const fleetIds = this.fleetService.fleets()
+        .filter(f => f.organization_id === org.id)
+        .map(f => f.id);
+      if (fleetIds.length === 0) return undefined;
+      return { fleetIds };
+    },
+    loader: async ({ params: { fleetIds } }: { params: { fleetIds: string[] } }) => {
+      // NOTE: .abortSignal() is NOT available on supabase-js v2.104.1 query builder — omit it
+      const { data, error } = await this.supabase.client
+        .from('vehicles')
+        .select('*')
+        .in('fleet_id', fleetIds)
+        .eq('status', 'active')
+        .order('make');
+      if (error) throw error;
+      return (data ?? []) as Vehicle[];
+    },
+    defaultValue: [],
+  });
+
+  private readonly vehicleIds = computed(() =>
+    this.vehicleResource.value()?.map((v: Vehicle) => v.id) ?? []
+  );
+
+  // === resource()-driven telemetry snapshot ===
+  // Seeds telemetryMap on initial load via get_latest_telemetry RPC.
+  // Skips when vehicleIds is empty (params returns undefined → status = 'idle').
+
+  readonly telemetryResource = resource({
+    params: () => {
+      const ids = this.vehicleIds();
+      return ids.length > 0 ? ids : undefined;
+    },
+    loader: async ({ params: vehicleIds }: { params: string[] }) => {
+      const { data, error } = await this.supabase.client
+        .rpc('get_latest_telemetry', { vehicle_ids: vehicleIds });
+      if (error) throw error;
+      const grouped = new Map<string, TelemetryRecord[]>();
+      for (const record of (data ?? [])) {
+        grouped.set(record.vehicle_id, [this.mapDbRecord(record)]);
+      }
+      this.telemetryMap.set(grouped);
+      return data;
+    },
+  });
+
   // === Computed / Derived State ===
 
   readonly vehiclesWithHealth = computed<VehicleWithHealth[]>(() => {
     const map = this.telemetryMap();
-    return this.vehicles().map((v) => {
+    return (this.vehicleResource.value() ?? []).map((v: Vehicle) => {
       const history = map.get(v.id) ?? [];
       const latest = history[0];
       return {
         ...v,
         latestTelemetry: latest,
         healthScore: this.calculateHealthScore(latest),
-        alertCount: this.alertService.activeAlerts().filter(
-          (a) => a.vehicleId === v.id,
-        ).length,
+        alertCount: this.alertService.activeAlerts().filter(a => a.vehicleId === v.id).length,
       };
     });
   });
@@ -60,75 +119,52 @@ export class VehicleService implements OnDestroy {
   });
 
   readonly onlineVehicleCount = computed(() =>
-    this.vehicles().filter((v) => v.status === 'active').length,
+    (this.vehicleResource.value() ?? []).filter((v: Vehicle) => v.status === 'active').length,
   );
 
   readonly alertVehicleCount = computed(() =>
     this.vehiclesWithHealth().filter((v) => v.alertCount > 0).length,
   );
 
-  // === Initialization ===
+  // === Constructor: effect() bridge ===
+  // Starts realtime subscription once vehicleResource resolves.
+  // Calls reloadVehicles$.next() before each new subscription to cancel prior one (WR-04).
 
-  /**
-   * Load vehicles scoped to the current organization (or specific fleet).
-   * If fleetId is provided, only loads vehicles from that fleet.
-   * If no fleetId, loads vehicles from all fleets in the org.
-   */
-  async loadVehicles(fleetId?: string): Promise<void> {
-    this.isLoading.set(true);
-    this.error.set(null);
-
-    try {
-      let vehicleQuery = this.supabase.client
-        .from('vehicles')
-        .select('*')
-        .order('make');
-
-      if (fleetId) {
-        vehicleQuery = vehicleQuery.eq('fleet_id', fleetId);
-      } else {
-        const org = this.organizationService.selectedOrganization();
-        if (!org) {
-          this.vehicles.set([]);
-          this.isLoading.set(false);
-          return;
-        }
-        const fleetIds = this.fleetService.fleets()
-          .filter((f) => f.organization_id === org.id)
-          .map((f) => f.id);
-
-        if (fleetIds.length === 0) {
-          this.vehicles.set([]);
-          this.isLoading.set(false);
-          return;
-        }
-        vehicleQuery = vehicleQuery.in('fleet_id', fleetIds);
+  constructor() {
+    effect(() => {
+      if (this.vehicleResource.status() === 'resolved') {
+        this.reloadVehicles$.next();
+        this.telemetryService.subscribeToFleet();
+        this.telemetryService.telemetryBatch$
+          .pipe(takeUntil(this.reloadVehicles$), takeUntil(this.destroy$))
+          .subscribe(batch => this.processBatch(batch));
       }
-
-      const { data, error } = await vehicleQuery;
-
-      if (error) throw error;
-
-      this.vehicles.set(data ?? []);
-
-      this.telemetryService.subscribeToFleet();
-
-      // Cancel any previous subscription before creating a new one (WR-04)
-      this.reloadVehicles$.next();
-      this.telemetryService.telemetryBatch$
-        .pipe(takeUntil(this.reloadVehicles$), takeUntil(this.destroy$))
-        .subscribe((batch) => this.processBatch(batch));
-    } catch (err: unknown) {
-      this.error.set((err as Error).message ?? 'Failed to load vehicles');
-    } finally {
-      this.isLoading.set(false);
-    }
+    });
   }
+
+  // === Selection ===
+
+  selectVehicle(vehicleId: string | null): void {
+    this.selectedVehicleId.set(vehicleId);
+  }
+
+  // === Legacy imperative loaders (kept for fleet-management compatibility) ===
+  // These are no-ops or thin wrappers — vehicleResource drives reactive loading.
+
+  /** @deprecated vehicleResource handles reactive loading; this reloads manually */
+  async loadVehicles(_fleetId?: string): Promise<void> {
+    this.vehicleResource.reload();
+  }
+
+  /** @deprecated vehicleResource handles reactive loading */
+  async loadAllVehicles(): Promise<void> {
+    this.vehicleResource.reload();
+  }
+
+  // === Fleet Management CRUD (Phase 2) ===
 
   /**
    * Get vehicles scoped to the current organization (or specific fleet).
-   * If fleetId is provided, returns vehicles from that fleet only.
-   * If no fleetId, returns vehicles from all fleets in the org.
    */
   async getVehicles(fleetId?: string): Promise<Vehicle[]> {
     const org = this.organizationService.selectedOrganization();
@@ -154,7 +190,6 @@ export class VehicleService implements OnDestroy {
       if (error) throw error;
       return data ?? [];
     } catch (err: unknown) {
-      this.error.set((err as Error).message ?? 'Failed to load vehicles');
       return [];
     }
   }
@@ -164,10 +199,7 @@ export class VehicleService implements OnDestroy {
    */
   async getVehicle(id: string): Promise<Vehicle | null> {
     const org = this.organizationService.selectedOrganization();
-    if (!org) {
-      this.error.set('No organization selected');
-      return null;
-    }
+    if (!org) return null;
 
     try {
       const { data, error } = await this.supabase.client
@@ -182,51 +214,71 @@ export class VehicleService implements OnDestroy {
         .filter((f) => f.organization_id === org.id)
         .map((f) => f.id);
 
-      if (!fleetIds.includes(data.fleet_id)) {
-        this.error.set('Vehicle not found in current organization');
-        return null;
-      }
-
+      if (!fleetIds.includes(data.fleet_id)) return null;
       return data;
-    } catch (err: unknown) {
-      this.error.set((err as Error).message ?? 'Failed to load vehicle');
+    } catch {
       return null;
     }
   }
 
-  /** Load latest telemetry records for all vehicles (initial snapshot) */
-  async loadInitialTelemetry(): Promise<void> {
-    const vehicleIds = this.vehicles().map((v) => v.id);
-    if (vehicleIds.length === 0) return;
+  /**
+   * Create a new vehicle.
+   */
+  async createVehicle(data: CreateVehicleDto): Promise<Vehicle | null> {
+    try {
+      const { data: created, error } = await this.supabase.client
+        .from('vehicles')
+        .insert({ ...data, status: 'active' })
+        .select()
+        .single();
 
-    const { data } = await this.supabase.client
-      .from('telemetry_logs')
-      .select('*')
-      .in('vehicle_id', vehicleIds)
-      .order('timestamp', { ascending: false })
-      .limit(500);
-
-    if (data) {
-      const grouped = new Map<string, TelemetryRecord[]>();
-      for (const record of data) {
-        const list = grouped.get(record['vehicle_id'] as string) ?? [];
-        list.push(this.mapDbRecord(record));
-        grouped.set(record['vehicle_id'] as string, list);
-      }
-      this.telemetryMap.set(grouped);
+      if (error) throw error;
+      return created;
+    } catch {
+      return null;
     }
   }
 
-  // === Selection ===
+  /**
+   * Update a vehicle.
+   */
+  async updateVehicle(
+    id: string,
+    updates: Partial<CreateVehicleDto>,
+  ): Promise<boolean> {
+    try {
+      const { error } = await this.supabase.client
+        .from('vehicles')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id);
 
-  selectVehicle(vehicleId: string | null): void {
-    this.selectedVehicleId.set(vehicleId);
+      if (error) throw error;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Soft-delete: sets status to 'inactive'. Does NOT hard-delete.
+   */
+  async deleteVehicle(id: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase.client
+        .from('vehicles')
+        .update({ status: 'inactive', updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // === Private ===
 
   private processBatch(batch: TelemetryRecord[]): void {
-    // Merge latest record per vehicle from the batch
     const latestPerVehicle = new Map<string, TelemetryRecord>();
     for (const record of batch) {
       const existing = latestPerVehicle.get(record.vehicle_id);
@@ -238,7 +290,6 @@ export class VehicleService implements OnDestroy {
       }
     }
 
-    // Update telemetryMap and trigger alert checks
     this.telemetryMap.update((map) => {
       const newMap = new Map(map);
       latestPerVehicle.forEach((record, vehicleId) => {
@@ -247,8 +298,7 @@ export class VehicleService implements OnDestroy {
           vehicleId,
           [record, ...existing].slice(0, MAX_TELEMETRY_HISTORY),
         );
-        // Trigger alert evaluation
-        const vehicle = this.vehicles().find((v) => v.id === vehicleId);
+        const vehicle = (this.vehicleResource.value() ?? []).find((v: Vehicle) => v.id === vehicleId);
         this.alertService.checkAndCreateAlerts(record, vehicle ? getVehicleDisplayName(vehicle) : undefined);
       });
       return newMap;
@@ -282,104 +332,6 @@ export class VehicleService implements OnDestroy {
       fuel_level: raw['fuel_level'] as number | undefined,
       signal_strength: raw['signal_strength'] as number | undefined,
     };
-  }
-
-  // === Fleet Management CRUD (Phase 2) ===
-
-  /**
-   * Load all active vehicles across all fleets (for "All Fleets" view).
-   */
-  async loadAllVehicles(): Promise<void> {
-    this.isLoading.set(true);
-    this.error.set(null);
-
-    try {
-      const { data, error } = await this.supabase.client
-        .from('vehicles')
-        .select('*')
-        .eq('status', 'active')
-        .order('nickname');
-
-      if (error) throw error;
-      this.vehicles.set(data ?? []);
-    } catch (err: unknown) {
-      this.error.set((err as Error).message ?? 'Failed to load vehicles');
-    } finally {
-      this.isLoading.set(false);
-    }
-  }
-
-  /**
-   * Create a new vehicle and optimistically append to vehicles signal.
-   */
-  async createVehicle(data: CreateVehicleDto): Promise<Vehicle | null> {
-    this.error.set(null);
-
-    try {
-      const { data: created, error } = await this.supabase.client
-        .from('vehicles')
-        .insert({ ...data, status: 'active' })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      this.vehicles.update((vehicles) => [...vehicles, created]);
-      return created;
-    } catch (err: unknown) {
-      this.error.set((err as Error).message ?? 'Failed to create vehicle');
-      return null;
-    }
-  }
-
-  /**
-   * Update a vehicle and patch it in the vehicles signal.
-   */
-  async updateVehicle(
-    id: string,
-    updates: Partial<CreateVehicleDto>,
-  ): Promise<boolean> {
-    this.error.set(null);
-
-    try {
-      const { error } = await this.supabase.client
-        .from('vehicles')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      this.vehicles.update((vehicles) =>
-        vehicles.map((v) => (v.id === id ? { ...v, ...updates } : v)),
-      );
-      return true;
-    } catch (err: unknown) {
-      this.error.set((err as Error).message ?? 'Failed to update vehicle');
-      return false;
-    }
-  }
-
-  /**
-   * Soft-delete: sets status to 'inactive'. Does NOT hard-delete.
-   * Historical telemetry is preserved.
-   */
-  async deleteVehicle(id: string): Promise<boolean> {
-    this.error.set(null);
-
-    try {
-      const { error } = await this.supabase.client
-        .from('vehicles')
-        .update({ status: 'inactive', updated_at: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      this.vehicles.update((vehicles) => vehicles.filter((v) => v.id !== id));
-      return true;
-    } catch (err: unknown) {
-      this.error.set((err as Error).message ?? 'Failed to delete vehicle');
-      return false;
-    }
   }
 
   ngOnDestroy(): void {

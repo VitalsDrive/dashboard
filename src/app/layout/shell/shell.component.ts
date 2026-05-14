@@ -13,7 +13,6 @@ import { HeaderComponent } from '../header/header.component';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { AlertBannerComponent } from '../../shared/components/alert-banner/alert-banner.component';
 import { ToastComponent } from '../../shared/components/toast/toast.component';
-import { VehicleService } from '../../core/services/vehicle.service';
 import { OrganizationService } from '../../core/services/organization.service';
 import { FleetService } from '../../core/services/fleet.service';
 
@@ -32,7 +31,6 @@ import { FleetService } from '../../core/services/fleet.service';
   ],
 })
 export class ShellComponent implements OnInit {
-  private readonly vehicleService = inject(VehicleService);
   private readonly organizationService = inject(OrganizationService);
   private readonly fleetService = inject(FleetService);
   private readonly breakpointObserver = inject(BreakpointObserver);
@@ -52,12 +50,11 @@ export class ShellComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // VehicleService now uses resource() to reactively load vehicles when
+    // selectedOrganization changes — no manual loadVehicles() call needed.
+    // Load orgs and fleets to seed the signals that vehicleResource.params() reads.
     this.organizationService.loadOrganizations().then(() => {
-      this.fleetService.loadFleets().then(() => {
-        this.vehicleService.loadVehicles().then(() => {
-          this.vehicleService.loadInitialTelemetry();
-        });
-      });
+      this.fleetService.loadFleets();
     });
   }
 
