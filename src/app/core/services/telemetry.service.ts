@@ -23,37 +23,32 @@ export class TelemetryService implements OnDestroy {
 
   readonly connectionStatus = signal<ConnectionStatus>('disconnected');
 
-  private fleetChannel: RealtimeChannel | null = null;
+  // One Broadcast channel per fleet — avoids postgres_changes JWT/RLS issue
+  private fleetChannels: RealtimeChannel[] = [];
   private vehicleChannels = new Map<string, RealtimeChannel>();
 
   /**
-   * Subscribe to all fleet telemetry via Supabase Realtime.
-   * Call once on app init (VehicleService bootstraps this).
+   * Subscribe to live telemetry via per-fleet Broadcast channels.
+   * DB trigger (017) calls realtime.send() with private=false on each INSERT.
    */
-  subscribeToFleet(): void {
-    if (this.fleetChannel) return;
+  subscribeToFleet(fleetIds: string[]): void {
+    if (this.fleetChannels.length > 0) return;
 
     this.connectionStatus.set('reconnecting');
 
-    this.fleetChannel = this.supabase.client
-      .channel('fleet-telemetry')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'telemetry_logs' },
-        (payload) => {
-          const record = this.mapPayload(payload.new);
+    this.fleetChannels = fleetIds.map((fleetId) =>
+      this.supabase.client
+        .channel(`telemetry:${fleetId}`)
+        .on('broadcast', { event: 'new-telemetry' }, (message: { payload: unknown }) => {
+          const record = this.mapPayload(message.payload as Record<string, unknown>);
           if (record) this.channel$.next(record);
-        },
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          this.connectionStatus.set('connected');
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          this.connectionStatus.set('disconnected');
-        } else if (status === 'CLOSED') {
-          this.connectionStatus.set('disconnected');
-        }
-      });
+        })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') this.connectionStatus.set('connected');
+          else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') this.connectionStatus.set('disconnected');
+          else if (status === 'CLOSED') this.connectionStatus.set('disconnected');
+        })
+    );
   }
 
   /**
@@ -96,17 +91,19 @@ export class TelemetryService implements OnDestroy {
 
   private mapPayload(raw: Record<string, unknown>): TelemetryRecord | null {
     if (!raw || !raw['vehicle_id']) return null;
+    const rpm = raw['rpm'] as number | undefined;
     return {
       id: raw['id'] as string | undefined,
       vehicle_id: raw['vehicle_id'] as string,
       timestamp: (raw['timestamp'] as string) ?? new Date().toISOString(),
-      rpm: raw['rpm'] as number | undefined,
+      rpm,
       speed: raw['speed'] as number | undefined,
-      engine_on: Boolean(raw['engine_on']),
-      coolant_temp: Number(raw['coolant_temp'] ?? 0),
+      engine_on: Boolean(raw['engine_on'] ?? (rpm != null && rpm > 0)),
+      coolant_temp: Number(raw['coolant_temp'] ?? raw['temp'] ?? 0),
       voltage: Number(raw['voltage'] ?? 0),
-      latitude: raw['latitude'] as number | undefined,
-      longitude: raw['longitude'] as number | undefined,
+      // DB columns are lat/lng; model uses latitude/longitude
+      latitude: (raw['latitude'] ?? raw['lat']) as number | undefined,
+      longitude: (raw['longitude'] ?? raw['lng']) as number | undefined,
       dtc_codes: (raw['dtc_codes'] as string[]) ?? [],
       fuel_level: raw['fuel_level'] as number | undefined,
       signal_strength: raw['signal_strength'] as number | undefined,
@@ -118,8 +115,8 @@ export class TelemetryService implements OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
 
-    if (this.fleetChannel) {
-      this.supabase.client.removeChannel(this.fleetChannel);
+    for (const ch of this.fleetChannels) {
+      this.supabase.client.removeChannel(ch);
     }
     this.vehicleChannels.forEach((ch) => {
       this.supabase.client.removeChannel(ch);

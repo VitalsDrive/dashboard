@@ -143,7 +143,8 @@ export class VehicleService implements OnDestroy {
     effect(() => {
       if (this.vehicleResource.status() === 'resolved' && !this.fleetSubscribed) {
         this.fleetSubscribed = true;
-        this.telemetryService.subscribeToFleet();
+        const fleetIds = this.fleetService.fleets().map((f) => f.id);
+        this.telemetryService.subscribeToFleet(fleetIds);
         this.telemetryService.telemetryBatch$
           .pipe(takeUntil(this.destroy$))
           .subscribe(batch => this.processBatch(batch));
