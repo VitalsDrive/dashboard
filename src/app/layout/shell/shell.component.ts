@@ -68,10 +68,11 @@ export class ShellComponent {
     // not 3000ms as UI-SPEC specifies — ALERT_AUTO_DISMISS.info is the closest available.
     effect(() => {
       const status = this.telemetryService.connectionStatus();
-      if (this.previousConnectionStatus !== null && this.previousConnectionStatus !== status) {
-        if (status === 'disconnected') {
+      const prev = this.previousConnectionStatus;
+      if (prev !== null && prev !== status) {
+        if (status === 'disconnected' || status === 'reconnecting') {
           this.alertService.pushAlert('Connection lost — reconnecting…', 'warning');
-        } else if (status === 'connected' && this.previousConnectionStatus === 'disconnected') {
+        } else if (status === 'connected' && prev !== 'connected') {
           this.alertService.pushAlert('Live data restored.', 'info');
         }
       }
