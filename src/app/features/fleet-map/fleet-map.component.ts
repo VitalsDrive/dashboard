@@ -64,8 +64,9 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
     // Watch for telemetry updates and refresh markers (throttled)
     effect(() => {
       const vehicles = this.vehicles();
-      if (this.map && vehicles.length > 0) {
+      if (this.map) {
         if (this.updateTimeout) clearTimeout(this.updateTimeout);
+        // updateMarkers([]) correctly removes stale markers when fleet empties.
         this.updateTimeout = setTimeout(() => this.updateMarkers(vehicles), 1000);
       }
     });
@@ -92,8 +93,11 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
       maxZoom: 19,
     }).addTo(this.map);
 
-    // Initial marker placement
-    this.updateMarkers(this.vehicles());
+    // Initial marker placement — only once the vehicle resource has resolved,
+    // so initialFitDone isn't burned on a transient pre-resolution snapshot (WR-05).
+    if (this.vehicleService.vehicleResource.status() === 'resolved') {
+      this.updateMarkers(this.vehicles());
+    }
   }
 
   private updateMarkers(vehicles: VehicleWithHealth[]): void {
@@ -205,15 +209,25 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
     return 'offline';
   }
 
+  private escapeHtml(value: unknown): string {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   private buildPopupContent(vehicle: VehicleWithHealth): string {
     const temp = vehicle.latestTelemetry?.coolant_temp ?? '--';
     const volt = vehicle.latestTelemetry?.voltage ?? '--';
+    const name = this.escapeHtml(getVehicleDisplayName(vehicle));
     return `
       <div style="font-family: var(--font-family); color: #e2e8f0; padding: 4px 0;">
-        <strong style="font-size: 14px;">${getVehicleDisplayName(vehicle)}</strong>
+        <strong style="font-size: 14px;">${name}</strong>
         <div style="margin-top: 6px; font-size: 12px; color: #9ca3af;">
-          <div>Temp: ${temp}°C</div>
-          <div>Voltage: ${volt}V</div>
+          <div>Temp: ${this.escapeHtml(temp)}°C</div>
+          <div>Voltage: ${this.escapeHtml(volt)}V</div>
           <div>Health: ${vehicle.healthScore}%</div>
         </div>
       </div>
