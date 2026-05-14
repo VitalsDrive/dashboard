@@ -5,7 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, UpperCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,6 +25,7 @@ type AlertFilter = 'all' | 'critical' | 'warning' | 'acknowledged';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
+    UpperCasePipe,
     RouterLink,
     MatButtonModule,
     MatIconModule,

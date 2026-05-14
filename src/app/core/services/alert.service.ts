@@ -109,15 +109,13 @@ export class AlertService implements OnDestroy {
       .channel('alerts-realtime')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'alerts' },
+        // fleet_id filter bypasses Realtime RLS (Auth0 jwt->>'sub' not forwarded to RLS context)
+        { event: 'INSERT', schema: 'public', table: 'alerts', filter: `fleet_id=in.(${fleetIds.join(',')})` },
         (payload: { new: unknown }) => {
           const alert = payload.new as SupabaseAlert;
-          // T-04-07: filter to own fleets only (RLS is backstop)
-          if (fleetIds.includes(alert.fleet_id)) {
-            this._dbAlerts.update((alerts) => [alert, ...alerts]);
-            // Push in-memory Alert so ToastComponent fires (COOL-02 / BATT-02)
-            this.pushAlertFromDb(alert);
-          }
+          this._dbAlerts.update((alerts) => [alert, ...alerts]);
+          // Push in-memory Alert so ToastComponent fires (COOL-02 / BATT-02)
+          this.pushAlertFromDb(alert);
         },
       )
       .subscribe();
