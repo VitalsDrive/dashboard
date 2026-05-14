@@ -326,17 +326,18 @@ export class VehicleService implements OnDestroy {
   }
 
   private mapDbRecord(raw: Record<string, unknown>): TelemetryRecord {
+    const rpm = raw['rpm'] as number | undefined;
     return {
       id: raw['id'] as string,
       vehicle_id: raw['vehicle_id'] as string,
       timestamp: raw['timestamp'] as string,
-      rpm: raw['rpm'] as number | undefined,
+      rpm,
       speed: raw['speed'] as number | undefined,
-      engine_on: Boolean(raw['engine_on']),
-      coolant_temp: Number(raw['coolant_temp'] ?? 0),
+      engine_on: Boolean(raw['engine_on'] ?? (rpm != null && rpm > 0)),
+      coolant_temp: Number(raw['coolant_temp'] ?? raw['temp'] ?? 0),
       voltage: Number(raw['voltage'] ?? 0),
-      latitude: raw['latitude'] as number | undefined,
-      longitude: raw['longitude'] as number | undefined,
+      latitude: (raw['latitude'] ?? raw['lat']) as number | undefined,
+      longitude: (raw['longitude'] ?? raw['lng']) as number | undefined,
       dtc_codes: (raw['dtc_codes'] as string[]) ?? [],
       fuel_level: raw['fuel_level'] as number | undefined,
       signal_strength: raw['signal_strength'] as number | undefined,
