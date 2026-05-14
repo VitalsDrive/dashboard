@@ -43,7 +43,7 @@ interface VehicleMarkerData {
   imports: [VehicleDetailPanelComponent, LoadingSpinnerComponent],
 })
 export class FleetMapComponent implements AfterViewInit, OnDestroy {
-  private readonly vehicleService = inject(VehicleService);
+  protected readonly vehicleService = inject(VehicleService);
   private readonly alertService = inject(AlertService);
 
   private map: L.Map | null = null;
