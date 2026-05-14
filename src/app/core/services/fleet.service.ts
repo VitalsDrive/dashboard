@@ -16,6 +16,7 @@ export class FleetService {
   readonly selectedFleet = signal<Fleet | null>(null);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
+  private _loaded = false;
 
   readonly fleetsWithStats = computed<FleetWithStats[]>(() => {
     return this.fleets().map((f) => ({
@@ -30,7 +31,8 @@ export class FleetService {
     return this.organizationService.selectedOrganization()?.id ?? null;
   }
 
-  async loadFleets(organizationId?: string): Promise<void> {
+  async loadFleets(organizationId?: string, force = false): Promise<void> {
+    if (!force && this._loaded) return;
     this.isLoading.set(true);
     this.error.set(null);
 
@@ -50,6 +52,7 @@ export class FleetService {
 
       if (error) throw error;
       this.fleets.set(data ?? []);
+      this._loaded = true;
     } catch (err: unknown) {
       this.error.set((err as Error).message ?? "Failed to load fleets");
     } finally {

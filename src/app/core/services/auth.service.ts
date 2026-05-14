@@ -91,16 +91,26 @@ export class AuthService {
   private async initializeAfterAuth0(): Promise<void> {
     if (this.internalToken) return; // already initialized this session
     try {
+      console.log('[AuthService] initializeAfterAuth0 start');
       const auth0Token = await firstValueFrom(this.auth0.getAccessTokenSilently());
       await this.exchangeToken(auth0Token);
+      console.log('[AuthService] token exchanged, internalToken set:', !!this.internalToken);
       // Set VD JWT on Supabase client so RLS (auth.jwt()->>'sub') resolves correctly
       this.supabaseService.setAccessToken(this.internalToken);
-      await this.initializeUserState();
+      const state = await this.initializeUserState();
+      console.log('[AuthService] userState:', state);
       await this.checkUserRoles();
     } catch (err) {
-      console.error('Auth initialization failed:', err);
+      console.error('[AuthService] Auth initialization failed:', err);
     } finally {
+      console.log('[AuthService] isInitialized set true, isOnboardingComplete:', this.isOnboardingComplete());
       this.isInitialized.set(true);
+      // Restore post-login redirect (e.g. /join?token=...) saved before Auth0 redirect
+      const redirect = sessionStorage.getItem('vd_post_login_redirect');
+      if (redirect) {
+        sessionStorage.removeItem('vd_post_login_redirect');
+        this.router.navigateByUrl(redirect);
+      }
     }
   }
 
@@ -240,25 +250,34 @@ export class AuthService {
       };
     }
 
-    // D-10: query fleet_members for organization membership (user_id is TEXT = Auth0 sub)
-    const { data: membership, error: memberError } = await this.supabaseService.client
-      .from('fleet_members')
-      .select('organization_id, role')
-      .eq('user_id', user.id)
-      .limit(1)
-      .maybeSingle();
+    // D-10: check org ownership (owner_id) and fleet membership in parallel.
+    // Org owners appear in organizations.owner_id but not necessarily in fleet_members.
+    const [{ data: ownedOrg, error: ownerError }, { data: membership, error: memberError }] =
+      await Promise.all([
+        this.supabaseService.client
+          .from('organizations')
+          .select('id')
+          .eq('owner_id', user.id)
+          .maybeSingle(),
+        this.supabaseService.client
+          .from('fleet_members')
+          .select('organization_id, role')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
-    if (memberError) {
-      console.error('Failed to load fleet membership:', memberError);
-    }
+    if (ownerError) console.error('Failed to load org ownership:', ownerError);
+    if (memberError) console.error('Failed to load fleet membership:', memberError);
 
-    const hasOrganization = !!membership?.organization_id;
-    const organizationId = membership?.organization_id ?? null;
+    const organizationId = ownedOrg?.id ?? membership?.organization_id ?? null;
+    const hasOrganization = !!organizationId;
+    const isMember = !!membership?.organization_id; // joined via invite — already has fleet assignment
 
-    let hasFleet = false;
+    let hasFleet = isMember; // members always have a fleet (assigned at invite redemption)
 
-    // D-11: query fleets count for the organization
-    if (hasOrganization && organizationId) {
+    // Owners need to verify a fleet exists under their org
+    if (!isMember && hasOrganization && organizationId) {
       const { count, error: fleetError } = await this.supabaseService.client
         .from('fleets')
         .select('id', { count: 'exact', head: true })
@@ -306,6 +325,13 @@ export class AuthService {
 
   getUserEmail(): string {
     return this.currentUser()?.email ?? "";
+  }
+
+  // Called by guards/components that have already verified org+fleet via Supabase.
+  // Sets state directly without re-querying, avoiding RLS failures on anon client.
+  markOnboardingComplete(): void {
+    this.isOnboardingComplete.set(true);
+    this.isAllowlisted.set(true);
   }
 
   async completeOnboarding(

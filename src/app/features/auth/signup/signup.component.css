@@ -1,0 +1,141 @@
+.signup-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #100b07 0%, #1a130d 100%);
+  padding: var(--vd-space-6);
+}
+
+.signup-card {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--vd-space-10);
+  background: var(--vd-bg-surface);
+  border: 1px solid var(--vd-border);
+  border-radius: var(--vd-radius-xl);
+  box-shadow: var(--vd-shadow-modal);
+}
+
+.signup-brand {
+  text-align: center;
+  margin-bottom: var(--vd-space-8);
+}
+
+.brand-icon {
+  display: block;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--vd-space-2);
+}
+
+.brand-name {
+  font-family: var(--vd-font-display);
+  font-size: var(--vd-text-2xl);
+  font-weight: 700;
+  color: var(--vd-fg-1);
+  margin: 0 0 var(--vd-space-1);
+}
+
+.brand-tagline {
+  margin: 0;
+  color: var(--vd-fg-3);
+  font-size: var(--vd-text-sm);
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-2);
+  padding: var(--vd-space-3) var(--vd-space-4);
+  background: var(--vd-critical-bg);
+  border: 1px solid var(--vd-critical);
+  border-radius: var(--vd-radius-sm);
+  color: var(--vd-critical);
+  margin-bottom: var(--vd-space-5);
+  font-size: var(--vd-text-sm);
+}
+
+.error-banner mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vd-space-2);
+}
+
+.signup-field {
+  width: 100%;
+}
+
+.signup-field mat-icon {
+  color: var(--vd-fg-3);
+  margin-right: var(--vd-space-2);
+}
+
+.signup-btn {
+  width: 100%;
+  height: 48px;
+  font-size: var(--vd-text-md);
+  font-weight: 600;
+  margin-top: var(--vd-space-2);
+}
+
+.signup-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.signup-footer {
+  text-align: center;
+  margin-top: var(--vd-space-6);
+  padding-top: var(--vd-space-6);
+  border-top: 1px solid var(--vd-border-subtle);
+  color: var(--vd-fg-3);
+  font-size: var(--vd-text-sm);
+}
+
+.signup-footer a {
+  color: var(--vd-brand);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.signup-footer a:hover {
+  color: var(--vd-brand-hover);
+  text-decoration: underline;
+}
+
+/* Material overrides */
+::ng-deep .signup-field .mat-mdc-form-field-subscript-wrapper {
+  margin-top: 4px;
+}
+
+::ng-deep .signup-field .mdc-text-field--outlined .mdc-notched-outline__leading,
+::ng-deep .signup-field .mdc-text-field--outlined .mdc-notched-outline__notch,
+::ng-deep .signup-field .mdc-text-field--outlined .mdc-notched-outline__trailing {
+  border-color: var(--vd-border);
+}
+
+::ng-deep .signup-field .mat-mdc-form-field-focus .mdc-notched-outline__leading,
+::ng-deep .signup-field .mat-mdc-form-field-focus .mdc-notched-outline__notch,
+::ng-deep .signup-field .mat-mdc-form-field-focus .mdc-notched-outline__trailing {
+  border-color: var(--vd-brand);
+  border-width: 2px;
+}
+
+::ng-deep .signup-field .mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-floating-label {
+  color: var(--vd-fg-3);
+}
+
+::ng-deep .signup-field .mdc-text-field--outlined:not(.mdc-text-field--disabled) {
+  background: var(--vd-bg-sunken);
+}
+
+::ng-deep .signup-field .mat-mdc-form-field-error {
+  color: var(--vd-critical);
+}

@@ -1,0 +1,47 @@
+/* ============================================================
+   Angular Material — warm dark theme overrides
+   ============================================================ */
+
+.mat-drawer-container,
+.mat-sidenav-container {
+  background: var(--vd-bg-base) !important;
+  color: var(--vd-fg-2) !important;
+}
+
+.mat-drawer,
+.mat-sidenav {
+  background: var(--vd-bg-sidebar) !important;
+}
+
+.mdc-text-field--outlined .mdc-notched-outline__leading,
+.mdc-text-field--outlined .mdc-notched-outline__notch,
+.mdc-text-field--outlined .mdc-notched-outline__trailing {
+  border-color: var(--vd-border) !important;
+}
+
+.mdc-text-field--outlined:not(.mdc-text-field--disabled) {
+  background: var(--vd-bg-sunken) !important;
+}
+
+.mdc-floating-label    { color: var(--vd-fg-3) !important; }
+.mat-mdc-input-element { color: var(--vd-fg-1) !important; }
+
+.mat-mdc-raised-button.mat-primary,
+.mat-mdc-flat-button.mat-primary {
+  background:  var(--vd-brand) !important;
+  color:       var(--vd-fg-inverse) !important;
+  font-family: var(--vd-font-sans) !important;
+  font-weight: 600 !important;
+}
+.mat-mdc-raised-button.mat-primary:hover,
+.mat-mdc-flat-button.mat-primary:hover {
+  background: var(--vd-brand-hover) !important;
+}
+
+.mat-mdc-tab-header { border-bottom: 1px solid var(--vd-border) !important; }
+.mat-mdc-tab .mdc-tab__text-label                 { color: var(--vd-fg-3) !important; }
+.mat-mdc-tab.mdc-tab--active .mdc-tab__text-label { color: var(--vd-brand) !important; }
+.mat-mdc-tab-indicator__content--underline        { border-color: var(--vd-brand) !important; }
+
+.mat-mdc-icon-button       { color: var(--vd-fg-2) !important; }
+.mat-mdc-icon-button:hover { color: var(--vd-fg-1) !important; }

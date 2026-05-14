@@ -12,8 +12,10 @@ export class OrganizationService {
   readonly selectedOrganization = signal<Organization | null>(null);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
+  private _loaded = false;
 
-  async loadOrganizations(): Promise<void> {
+  async loadOrganizations(force = false): Promise<void> {
+    if (!force && this._loaded) return;
     this.isLoading.set(true);
     this.error.set(null);
 
@@ -25,6 +27,10 @@ export class OrganizationService {
 
       if (error) throw error;
       this.organizations.set(data ?? []);
+      this._loaded = true;
+      if (!this.selectedOrganization() && (data ?? []).length > 0) {
+        this.selectOrganization(data![0].id);
+      }
     } catch (err: unknown) {
       this.error.set((err as Error).message ?? "Failed to load organizations");
     } finally {

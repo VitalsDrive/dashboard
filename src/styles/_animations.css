@@ -1,0 +1,32 @@
+/* ============================================================
+   Global keyframe animations — referenced by shared/ui components
+   ============================================================ */
+
+/* Status dots, connection pill: opacity-only pulse */
+@keyframes vd-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+/* Critical gauge / card glow: drop-shadow throb */
+@keyframes vd-pulse-soft {
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.45)); }
+  50%       { filter: drop-shadow(0 0 22px rgba(239, 68, 68, 0.85)); }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(0.85); }
+}
+
+@keyframes slide-in-top {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vd-status-dot--pulse,
+  .vd-connection-pill__dot--pulse {
+    animation: none;
+  }
+}

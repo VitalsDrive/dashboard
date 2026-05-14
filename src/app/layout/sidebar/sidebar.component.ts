@@ -55,8 +55,18 @@ export class SidebarComponent {
       badgeSignal: this.alertService.activeAlertCount,
     },
     {
+      label: 'Fleet Management',
+      icon: 'garage',
+      route: '/fleet-management',
+    },
+    {
+      label: 'Settings',
+      icon: 'manage_accounts',
+      route: '/settings/invite',
+    },
+    {
       label: 'Backoffice',
-      icon: 'settings',
+      icon: 'admin_panel_settings',
       route: '/backoffice',
     },
   ];

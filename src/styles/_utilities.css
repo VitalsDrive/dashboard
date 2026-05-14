@@ -1,0 +1,46 @@
+/* ============================================================
+   Utility classes referenced in templates
+   ============================================================ */
+
+.text-xs        { font-size: var(--vd-text-xs); }
+.text-sm        { font-size: var(--vd-text-sm); }
+.text-secondary { color: var(--vd-fg-2); }
+.text-muted     { color: var(--vd-fg-3); }
+.text-brand     { color: var(--vd-brand); }
+.text-healthy   { color: var(--vd-healthy); }
+.text-warning   { color: var(--vd-warning); }
+.text-critical  { color: var(--vd-critical); }
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vd-offline);
+  flex-shrink: 0;
+}
+.status-dot-healthy  { background: var(--vd-healthy); }
+.status-dot-warning  { background: var(--vd-warning); }
+.status-dot-critical { background: var(--vd-critical); }
+.status-dot-offline  { background: var(--vd-offline); }
+.status-dot.pulse    { animation: pulse-ring 2s var(--vd-ease-out) infinite; }
+
+.status-dot-lg {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.card {
+  background: var(--vd-bg-surface);
+  border: 1px solid var(--vd-border);
+  border-radius: var(--vd-radius-lg);
+  box-shadow: var(--vd-shadow-card);
+}

@@ -1,0 +1,36 @@
+/* ============================================================
+   RTL / bidi rules
+   Apply by setting <html dir="rtl" lang="he"> or wrapping
+   a subtree in [dir="rtl"]. Tokens stay neutral; only the
+   rules below change.
+   ============================================================ */
+
+[dir="rtl"], :lang(he) {
+  --vd-font-display: var(--vd-font-display-he);
+  --vd-font-sans: var(--vd-font-sans-he);
+  --vd-track-tight: -0.01em;
+  --vd-leading-tight: 1.2;
+  --vd-leading-snug: 1.4;
+}
+
+/* DTC codes and VINs are always LTR — wrap with .vd-ltr or <bdi> */
+.vd-ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.vd-rtl {
+  direction: rtl;
+  unicode-bidi: isolate;
+}
+
+/* Flip chevrons / arrows in RTL */
+[dir="rtl"] .vd-mirror {
+  transform: scaleX(-1);
+}
+
+/* Numerics stay LTR with tabular figures even in RTL surfaces */
+[dir="rtl"] .vd-mono,
+[dir="rtl"] .vd-metric {
+  direction: ltr;
+  unicode-bidi: isolate;
+}

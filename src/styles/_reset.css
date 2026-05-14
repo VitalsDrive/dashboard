@@ -1,0 +1,16 @@
+/* ============================================================
+   Global resets
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--vd-bg-base);
+  color: var(--vd-fg-2);
+  font-family: var(--vd-font-sans);
+  font-size: var(--vd-text-base);
+  line-height: var(--vd-leading-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

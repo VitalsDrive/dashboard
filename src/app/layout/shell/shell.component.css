@@ -19,7 +19,6 @@
 .shell-main {
   flex: 1;
   overflow-y: auto;
-  padding: var(--content-padding);
 }
 
 /* Mobile */

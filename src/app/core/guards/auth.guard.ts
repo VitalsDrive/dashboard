@@ -57,14 +57,27 @@ export const authGuardChild: CanActivateChildFn = authCheck;
 export const onboardingGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  const organizationService = inject(OrganizationService);
+  const fleetService = inject(FleetService);
 
   await waitForAuth(auth);
 
-  if (!auth.isOnboardingComplete()) {
-    return router.createUrlTree(['/onboarding']);
+  // Fast path: already confirmed during init or a previous guard run
+  if (auth.isOnboardingComplete()) return true;
+
+  // Fallback: load orgs+fleets if not yet cached (covers direct navigation after
+  // onboarding flow where onboardingStepGuard didn't re-run for child routes).
+  await organizationService.loadOrganizations();
+  if (organizationService.organizations().length > 0) {
+    await fleetService.loadFleets();
+    if (fleetService.fleets().length > 0) {
+      auth.markOnboardingComplete();
+      return true;
+    }
   }
 
-  return true;
+  console.log('[onboardingGuard] not complete → /onboarding');
+  return router.createUrlTree(['/onboarding']);
 };
 
 /**
@@ -74,7 +87,7 @@ export const onboardingGuard: CanActivateFn = async () => {
  * If authenticated + org + fleets → redirect to /dashboard
  * If not authenticated → redirect to /login
  */
-export const onboardingStepGuard: CanActivateFn = async (route) => {
+export const onboardingStepGuard: CanActivateFn = async (route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   const organizationService = inject(OrganizationService);
@@ -88,31 +101,37 @@ export const onboardingStepGuard: CanActivateFn = async (route) => {
 
   await organizationService.loadOrganizations();
   const orgs = organizationService.organizations();
+  console.log('[onboardingStepGuard] orgs:', orgs);
 
   if (orgs.length === 0) {
-    const targetPath = route.routeConfig?.path;
-    if (targetPath !== 'organization') {
-      return router.createUrlTree(['/onboarding/organization']);
-    }
-    return true;
+    if (state.url.startsWith('/onboarding/organization')) return true;
+    console.log('[onboardingStepGuard] no orgs → /onboarding/organization');
+    return router.createUrlTree(['/onboarding/organization']);
   }
 
   if (!organizationService.selectedOrganization()) {
     organizationService.selectOrganization(orgs[0].id);
   }
+  console.log('[onboardingStepGuard] selectedOrg:', organizationService.selectedOrganization()?.id);
 
   await fleetService.loadFleets();
   const fleets = fleetService.fleets();
+  console.log('[onboardingStepGuard] fleets:', fleets);
 
   if (fleets.length === 0) {
-    const targetPath = route.routeConfig?.path;
-    if (targetPath !== 'fleet') {
-      return router.createUrlTree(['/onboarding/fleet']);
-    }
+    if (state.url.startsWith('/onboarding/fleet')) return true;
+    console.log('[onboardingStepGuard] no fleets → /onboarding/fleet');
+    return router.createUrlTree(['/onboarding/fleet']);
+  }
+
+  // Allow vehicle step — optional final onboarding step with a skip link
+  if (state.url.startsWith('/onboarding/vehicle') || state.url.startsWith('/onboarding/complete')) {
     return true;
   }
 
-  await auth.completeOnboarding();
+  console.log('[onboardingStepGuard] org+fleet confirmed → markOnboardingComplete, /dashboard');
+  // Guard has already confirmed org+fleet exist — set state directly, no re-query.
+  auth.markOnboardingComplete();
 
   return router.createUrlTree(['/dashboard']);
 };

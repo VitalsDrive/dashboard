@@ -1,0 +1,101 @@
+/* ============================================================
+   Token compatibility bridge
+   Maps legacy --color-* / --space-* / --font-size-* names used
+   in component CSS to the canonical --vd-* design tokens.
+   ============================================================ */
+:root {
+  /* Surfaces */
+  --color-bg-base:     var(--vd-bg-base);
+  --color-bg-surface:  var(--vd-bg-surface);
+  --color-bg-elevated: var(--vd-bg-elevated);
+  --color-bg-sunken:   var(--vd-bg-sunken);
+  --color-bg-header:   var(--vd-bg-header);
+  --color-bg-sidebar:  var(--vd-bg-sidebar);
+
+  /* Foreground */
+  --color-text-primary:   var(--vd-fg-1);
+  --color-text-secondary: var(--vd-fg-2);
+  --color-text-muted:     var(--vd-fg-3);
+  --color-text-disabled:  var(--vd-fg-4);
+
+  /* Brand */
+  --color-brand:        var(--vd-brand);
+  --color-brand-hover:  var(--vd-brand-hover);
+  --color-brand-active: var(--vd-brand-active);
+  --color-brand-muted:  var(--vd-brand-muted);
+  --color-brand-glow:   var(--vd-brand-glow);
+
+  /* Borders */
+  --color-border:        var(--vd-border);
+  --color-border-subtle: var(--vd-border-subtle);
+  --color-border-focus:  var(--vd-border-strong);
+
+  /* Semantic */
+  --color-healthy:     var(--vd-healthy);
+  --color-healthy-bg:  var(--vd-healthy-bg);
+  --color-warning:     var(--vd-warning);
+  --color-warning-bg:  var(--vd-warning-bg);
+  --color-critical:    var(--vd-critical);
+  --color-critical-bg: var(--vd-critical-bg);
+  --color-info:        var(--vd-info);
+  --color-info-bg:     var(--vd-info-bg);
+  --color-offline:     var(--vd-offline);
+
+  /* Typography */
+  --font-family:         var(--vd-font-sans);
+  --font-family-display: var(--vd-font-display);
+  --font-family-mono:    var(--vd-font-mono);
+  --font-size-xs:        var(--vd-text-xs);
+  --font-size-sm:        var(--vd-text-sm);
+  --font-size-base:      var(--vd-text-base);
+  --font-size-md:        var(--vd-text-md);
+  --font-size-lg:        var(--vd-text-lg);
+  --font-size-xl:        var(--vd-text-xl);
+  --font-size-2xl:       var(--vd-text-2xl);
+  --font-size-3xl:       var(--vd-text-3xl);
+  --font-size-4xl:       var(--vd-text-4xl);
+
+  /* Spacing */
+  --space-0:  var(--vd-space-0);
+  --space-1:  var(--vd-space-1);
+  --space-2:  var(--vd-space-2);
+  --space-3:  var(--vd-space-3);
+  --space-4:  var(--vd-space-4);
+  --space-5:  var(--vd-space-5);
+  --space-6:  var(--vd-space-6);
+  --space-8:  var(--vd-space-8);
+  --space-10: var(--vd-space-10);
+  --space-12: var(--vd-space-12);
+  --space-16: var(--vd-space-16);
+
+  /* Radii */
+  --radius-xs:   var(--vd-radius-xs);
+  --radius-sm:   var(--vd-radius-sm);
+  --radius-md:   var(--vd-radius-md);
+  --radius-lg:   var(--vd-radius-lg);
+  --radius-xl:   var(--vd-radius-xl);
+  --radius-full: var(--vd-radius-full);
+
+  /* Shadows */
+  --shadow-sm:       var(--vd-shadow-sm);
+  --shadow-card:     var(--vd-shadow-card);
+  --shadow-elevated: var(--vd-shadow-elevated);
+  --shadow-modal:    var(--vd-shadow-modal);
+
+  /* Motion */
+  --transition-fast: var(--vd-dur-fast) var(--vd-ease-out);
+  --transition-base: var(--vd-dur-base) var(--vd-ease-out);
+  --transition-slow: var(--vd-dur-slow) var(--vd-ease-in-out);
+
+  /* Layout */
+  --header-height:           var(--vd-header-h);
+  --sidebar-width:           var(--vd-sidebar-w);
+  --sidebar-width-collapsed: var(--vd-sidebar-w-collapsed);
+  --content-padding:         var(--vd-content-pad);
+
+  /* Z-index */
+  --z-sidebar: 90;
+  --z-header:  100;
+  --z-modal:   200;
+  --z-toast:   300;
+}
