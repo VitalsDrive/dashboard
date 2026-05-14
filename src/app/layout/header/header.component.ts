@@ -39,6 +39,7 @@ export class HeaderComponent {
 
   readonly criticalAlertCount = this.alertService.criticalAlertCount;
   readonly activeAlertCount = this.alertService.activeAlertCount;
+  readonly unacknowledgedCount = this.alertService.unacknowledgedCount;
   readonly connectionStatus = this.telemetryService.connectionStatus;
 
   onMenuToggle(): void {

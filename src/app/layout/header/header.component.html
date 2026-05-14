@@ -33,35 +33,21 @@
       }
     </div>
 
-    <!-- Alerts button -->
-    <a
-      routerLink="/alerts"
+    <!-- Bell badge: unacknowledged DB alerts -->
+    <button
       mat-icon-button
+      routerLink="/alerts"
       class="alert-btn"
-      [attr.aria-label]="activeAlertCount() + ' active alerts'"
-      matTooltip="Active Alerts"
+      [matBadge]="unacknowledgedCount()"
+      [matBadgeHidden]="unacknowledgedCount() === 0"
+      matBadgeColor="warn"
+      matBadgeSize="small"
+      [matBadgePosition]="'above after'"
+      matBadgeMax="99"
+      aria-label="View alerts"
+      matTooltip="Alerts"
     >
-      @if (criticalAlertCount() > 0) {
-        <mat-icon
-          [matBadge]="criticalAlertCount()"
-          matBadgeColor="warn"
-          matBadgeSize="small"
-          aria-hidden="true"
-        >
-          notifications_active
-        </mat-icon>
-      } @else if (activeAlertCount() > 0) {
-        <mat-icon
-          [matBadge]="activeAlertCount()"
-          matBadgeColor="accent"
-          matBadgeSize="small"
-          aria-hidden="true"
-        >
-          notifications
-        </mat-icon>
-      } @else {
-        <mat-icon aria-hidden="true">notifications_none</mat-icon>
-      }
-    </a>
+      <mat-icon aria-hidden="true">notifications</mat-icon>
+    </button>
   </div>
 </header>

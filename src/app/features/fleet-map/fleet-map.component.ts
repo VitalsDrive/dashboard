@@ -171,15 +171,20 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  private getMarkerColor(vehicle: VehicleWithHealth): string {
+    const state = this.getVehicleState(vehicle);
+    if (state === 'stale' || state === 'offline') return '#5a4530';
+    if (state === 'running') return '#84cc16';
+    // state === 'alert': determine severity from activeDbAlerts
+    const vehicleAlerts = this.alertService.activeDbAlerts()
+      .filter((a) => a.vehicle_id === vehicle.id);
+    const hasCritical = vehicleAlerts.some((a) => a.severity === 'critical');
+    return hasCritical ? '#ef4444' : '#eab308'; // red : yellow
+  }
+
   private getMarkerIcon(vehicle: VehicleWithHealth): L.DivIcon {
     const state = this.getVehicleState(vehicle);
-    const colors: Record<string, string> = {
-      offline: '#5a4530',
-      running: '#84cc16',
-      alert: '#eab308',
-      stale: '#5a4530',
-    };
-    const color = colors[state] ?? '#5a4530';
+    const color = this.getMarkerColor(vehicle);
     const opacity = state === 'stale' ? '0.5' : '1';
     const pulse = (state === 'running' || state === 'alert') ? 'pulse' : '';
 
