@@ -262,13 +262,20 @@ export class AlertService {
     this.voltageHistory.set(vehicleId, updated);
   }
 
+  /** Minimum voltage samples before predictive regression is trusted. */
+  private static readonly MIN_PREDICTION_SAMPLES = 15;
+
   /**
-   * Simple linear regression to predict voltage in ~2 hours.
-   * Assumes readings are ~1 minute apart; 120 readings = ~2 hours.
+   * Simple linear regression to predict near-future voltage.
    * Returns null if insufficient data.
+   *
+   * NOTE: telemetry batch cadence is not guaranteed to be 1/min, so the
+   * prediction horizon is capped relative to the sample count (extrapolate
+   * at most as far ahead as we have observed) to avoid amplifying noise
+   * from a short, noisy window into a false-positive alert.
    */
   private predictVoltageIn2Hours(history: number[]): number | null {
-    if (history.length < 5) return null;
+    if (history.length < AlertService.MIN_PREDICTION_SAMPLES) return null;
 
     const n = history.length;
     const xMean = (n - 1) / 2;
@@ -285,8 +292,10 @@ export class AlertService {
     const slope = numerator / denominator;
     const intercept = yMean - slope * xMean;
 
-    // Predict at 120 readings into the future (approx 2 hours at 1/min)
-    return slope * (n + 120) + intercept;
+    // Cap extrapolation: never predict further ahead than the window we
+    // actually observed (max horizon = n readings, ceiling 120).
+    const horizon = Math.min(n, 120);
+    return slope * (n + horizon) + intercept;
   }
 
   /** Expose voltage history for battery components */
