@@ -89,21 +89,22 @@ export class AlertService implements OnDestroy {
   // === Realtime subscription ===
 
   private alertChannel: RealtimeChannel | null = null;
-  private alertSubscribed = false;
 
   constructor() {
-    // effect() bridge: start Realtime subscription once alertResource resolves
+    // Re-subscribe whenever fleet set changes or resource resolves, so newly
+    // joined fleets receive Realtime INSERTs without a page reload (CR-01).
     effect(() => {
-      if (this.alertResource.status() === 'resolved' && !this.alertSubscribed) {
-        this.alertSubscribed = true;
-        const fleetIds = this.fleetService.fleets().map((f) => f.id);
-        this.subscribeToAlerts(fleetIds);
+      const fleetIds = this.fleetService.fleets().map((f) => f.id);
+      if (fleetIds.length === 0 || this.alertResource.status() !== 'resolved') return;
+      if (this.alertChannel) {
+        this.supabase.client.removeChannel(this.alertChannel);
+        this.alertChannel = null;
       }
+      this.subscribeToAlerts(fleetIds);
     });
   }
 
   subscribeToAlerts(fleetIds: string[]): void {
-    if (this.alertChannel) return;
     this.alertChannel = this.supabase.client
       .channel('alerts-realtime')
       .on(
@@ -131,8 +132,9 @@ export class AlertService implements OnDestroy {
       .eq('id', alertId);
     if (error) throw error;
     // Optimistic update — do NOT write acknowledged_by (UUID FK incompatible with Auth0 TEXT sub)
+    const ackedAt = new Date().toISOString();
     this._dbAlerts.update((alerts) =>
-      alerts.map((a) => (a.id === alertId ? { ...a, acknowledged: true } : a)),
+      alerts.map((a) => (a.id === alertId ? { ...a, acknowledged: true, acknowledged_at: ackedAt } : a)),
     );
   }
 
