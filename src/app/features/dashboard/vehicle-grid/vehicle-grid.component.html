@@ -1,9 +1,9 @@
 @if (isLoading()) {
   <app-loading-spinner message="Loading fleet..." [fullPage]="true" />
-} @else if (error()) {
+} @else if (hasError()) {
   <div class="grid-error" role="alert">
     <span class="grid-error-icon">&#9888;</span>
-    <p>Failed to load fleet: {{ error() }}</p>
+    <p>Failed to load fleet: {{ errorMessage() }}</p>
   </div>
 } @else if (vehicles().length === 0) {
   <div class="grid-empty">

@@ -1,8 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
-  output,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { VehicleService } from '../../../core/services/vehicle.service';
@@ -21,8 +21,9 @@ export class VehicleGridComponent {
   private readonly router = inject(Router);
 
   readonly vehicles = this.vehicleService.vehiclesWithHealth;
-  readonly isLoading = this.vehicleService.isLoading;
-  readonly error = this.vehicleService.error;
+  readonly isLoading = this.vehicleService.vehicleResource.isLoading;
+  readonly hasError = computed(() => this.vehicleService.vehicleResource.status() === 'error');
+  readonly errorMessage = this.vehicleService.vehicleResource.error;
 
   onVehicleSelected(vehicleId: string): void {
     this.router.navigate(['/vehicle', vehicleId]);

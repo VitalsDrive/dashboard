@@ -26,6 +26,58 @@
     </div>
   </div>
 
-  <!-- Vehicle grid -->
-  <app-vehicle-grid />
+  <!-- Vehicle grid — resource-driven loading/empty/populated states -->
+  @if (isLoading()) {
+    <app-loading-spinner message="Loading fleet..." [fullPage]="false" />
+  } @else if (vehiclesWithHealth().length === 0) {
+    <div class="dashboard-empty" style="
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--vd-space-12) var(--vd-space-8);
+      text-align: center;
+    ">
+      <span class="material-icons" style="
+        font-size: 48px;
+        color: var(--vd-text-muted);
+        margin-bottom: var(--vd-space-4);
+      " aria-hidden="true">directions_car</span>
+      <h2 style="
+        font-family: var(--vd-font-display);
+        font-size: var(--vd-text-xl);
+        font-weight: 600;
+        color: var(--vd-text-primary);
+        margin: 0 0 var(--vd-space-2) 0;
+        letter-spacing: var(--vd-track-tight);
+      ">No vehicles in your fleet</h2>
+      <p style="
+        font-family: var(--vd-font-sans);
+        font-size: var(--vd-text-md);
+        font-weight: 400;
+        color: var(--vd-text-secondary);
+        margin: 0 0 var(--vd-space-6) 0;
+        line-height: var(--vd-leading-base);
+      ">Add your first vehicle to start monitoring fleet health.</p>
+      <a
+        routerLink="/fleet-management"
+        style="
+          display: inline-flex;
+          align-items: center;
+          gap: var(--vd-space-1);
+          padding: var(--vd-space-2) var(--vd-space-6);
+          background: var(--vd-brand);
+          color: #000;
+          font-family: var(--vd-font-sans);
+          font-size: var(--vd-text-md);
+          font-weight: 600;
+          border-radius: var(--vd-radius-md);
+          text-decoration: none;
+          cursor: pointer;
+        "
+      >+ Add Vehicle</a>
+    </div>
+  } @else {
+    <app-vehicle-grid />
+  }
 </div>
