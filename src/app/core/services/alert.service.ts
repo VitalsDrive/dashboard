@@ -88,37 +88,36 @@ export class AlertService implements OnDestroy {
 
   // === Realtime subscription ===
 
-  private alertChannel: RealtimeChannel | null = null;
+  // One Broadcast channel per fleet (GAP-01 fix: no RLS JWT required)
+  private alertChannels: RealtimeChannel[] = [];
 
   constructor() {
-    // Re-subscribe whenever fleet set changes or resource resolves, so newly
-    // joined fleets receive Realtime INSERTs without a page reload (CR-01).
+    // Re-subscribe whenever fleet set changes or resource resolves (CR-01).
     effect(() => {
       const fleetIds = this.fleetService.fleets().map((f) => f.id);
       if (fleetIds.length === 0 || this.alertResource.status() !== 'resolved') return;
-      if (this.alertChannel) {
-        this.supabase.client.removeChannel(this.alertChannel);
-        this.alertChannel = null;
+      for (const ch of this.alertChannels) {
+        this.supabase.client.removeChannel(ch);
       }
+      this.alertChannels = [];
       this.subscribeToAlerts(fleetIds);
     });
   }
 
   subscribeToAlerts(fleetIds: string[]): void {
-    this.alertChannel = this.supabase.client
-      .channel('alerts-realtime')
-      .on(
-        'postgres_changes',
-        // fleet_id filter bypasses Realtime RLS (Auth0 jwt->>'sub' not forwarded to RLS context)
-        { event: 'INSERT', schema: 'public', table: 'alerts', filter: `fleet_id=in.(${fleetIds.join(',')})` },
-        (payload: { new: unknown }) => {
-          const alert = payload.new as SupabaseAlert;
+    // Broadcast topic per fleet: DB trigger calls realtime.send() with private=false,
+    // so no JWT/RLS check — topic scoping is the authorization boundary.
+    this.alertChannels = fleetIds.map((fleetId) =>
+      this.supabase.client
+        .channel(`alerts:${fleetId}`)
+        .on('broadcast', { event: 'new-alert' }, (message: { payload: unknown }) => {
+          const alert = message.payload as SupabaseAlert;
           this._dbAlerts.update((alerts) => [alert, ...alerts]);
           // Push in-memory Alert so ToastComponent fires (COOL-02 / BATT-02)
           this.pushAlertFromDb(alert);
-        },
-      )
-      .subscribe();
+        })
+        .subscribe()
+    );
   }
 
   // === acknowledgeAlert: direct Supabase UPDATE + optimistic signal flip ===
@@ -137,8 +136,8 @@ export class AlertService implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.alertChannel) {
-      this.supabase.client.removeChannel(this.alertChannel);
+    for (const ch of this.alertChannels) {
+      this.supabase.client.removeChannel(ch);
     }
   }
 
