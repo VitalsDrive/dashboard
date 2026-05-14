@@ -6,14 +6,54 @@
     </p>
   </div>
 
-  <div class="map-layout">
-    <!-- Leaflet map container -->
+  <div class="map-layout" style="position: relative;">
+    <!-- Leaflet map container — always rendered so Leaflet can init -->
     <div
       id="fleet-map"
       class="map-container"
       role="application"
       aria-label="Fleet map showing vehicle positions"
     ></div>
+
+    <!-- Loading overlay -->
+    @if (vehicleService.vehicleResource.isLoading()) {
+      <div class="map-overlay" style="
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(14, 10, 7, 0.75);
+        border-radius: var(--vd-radius-lg);
+        z-index: 1000;
+      ">
+        <app-loading-spinner message="Loading fleet data…" [fullPage]="false" />
+      </div>
+    }
+
+    <!-- Empty state overlay — no GPS data -->
+    @if (vehicleService.vehiclesWithHealth().length === 0 && !vehicleService.vehicleResource.isLoading()) {
+      <div class="map-overlay" style="
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(14, 10, 7, 0.75);
+        border-radius: var(--vd-radius-lg);
+        z-index: 999;
+      ">
+        <div style="text-align: center; padding: var(--vd-space-8);">
+          <p style="
+            font-family: var(--vd-font-display);
+            font-size: var(--vd-text-xl);
+            font-weight: 600;
+            color: var(--vd-text-primary);
+            margin: 0;
+          ">No vehicles with GPS data</p>
+        </div>
+      </div>
+    }
 
     <!-- Detail panel slide-in -->
     @if (selectedVehicle(); as vehicle) {
@@ -28,21 +68,27 @@
   <div class="map-legend" role="list" aria-label="Map legend">
     <div class="legend-item" role="listitem">
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-        <circle cx="8" cy="8" r="5" fill="#22c55e"/>
+        <circle cx="8" cy="8" r="5" fill="#84cc16"/>
       </svg>
       <span>Running</span>
     </div>
     <div class="legend-item" role="listitem">
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-        <circle cx="8" cy="8" r="5" fill="#ef4444"/>
+        <circle cx="8" cy="8" r="5" fill="#eab308"/>
       </svg>
       <span>Alert</span>
     </div>
     <div class="legend-item" role="listitem">
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-        <circle cx="8" cy="8" r="5" fill="#6b7280"/>
+        <circle cx="8" cy="8" r="5" fill="#5a4530"/>
       </svg>
       <span>Offline</span>
+    </div>
+    <div class="legend-item" role="listitem">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="opacity: 0.5;">
+        <circle cx="8" cy="8" r="5" fill="#5a4530"/>
+      </svg>
+      <span>Stale</span>
     </div>
   </div>
 </div>

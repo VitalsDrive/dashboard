@@ -13,6 +13,7 @@ import { VehicleService } from '../../core/services/vehicle.service';
 import { AlertService } from '../../core/services/alert.service';
 import { VehicleWithHealth, getVehicleDisplayName } from '../../core/models/vehicle.model';
 import { VehicleDetailPanelComponent } from './vehicle-detail-panel/vehicle-detail-panel.component';
+import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 
 // Fix Leaflet default marker icon path issue with bundlers
 const DEFAULT_ICON = L.icon({
@@ -39,7 +40,7 @@ interface VehicleMarkerData {
   templateUrl: './fleet-map.component.html',
   styleUrl: './fleet-map.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [VehicleDetailPanelComponent],
+  imports: [VehicleDetailPanelComponent, LoadingSpinnerComponent],
 })
 export class FleetMapComponent implements AfterViewInit, OnDestroy {
   private readonly vehicleService = inject(VehicleService);
@@ -48,6 +49,7 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
   private map: L.Map | null = null;
   private markerMap = new Map<string, VehicleMarkerData>();
   private updateTimeout: ReturnType<typeof setTimeout> | null = null;
+  private initialFitDone = false;
 
   readonly selectedVehicleId = signal<string | null>(null);
   readonly selectedVehicle = computed(() => {
@@ -112,6 +114,7 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
       if (existing) {
         existing.marker.setLatLng([lat, lng]);
         existing.marker.setIcon(this.getMarkerIcon(vehicle));
+        this.applyStaleTooltip(existing.marker, vehicle);
       } else {
         const marker = L.marker([lat, lng], {
           icon: this.getMarkerIcon(vehicle),
@@ -129,6 +132,7 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
         });
 
         marker.addTo(this.map!);
+        this.applyStaleTooltip(marker, vehicle);
         this.markerMap.set(vehicle.id, { marker, vehicleId: vehicle.id, lastLat: lat, lastLng: lng });
       }
     }
@@ -141,28 +145,43 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
       }
     }
 
-    // Auto-fit bounds
-    if (validVehicles.length > 0) {
+    // Auto-fit bounds — only on first load to avoid re-centering on telemetry updates
+    if (validVehicles.length > 0 && !this.initialFitDone) {
       const bounds = L.latLngBounds(
         validVehicles.map((v) => [v.latestTelemetry!.latitude!, v.latestTelemetry!.longitude!]),
       );
       this.map.fitBounds(bounds.pad(0.1));
+      this.initialFitDone = true;
+    }
+  }
+
+  private applyStaleTooltip(marker: L.Marker, vehicle: VehicleWithHealth): void {
+    const state = this.getVehicleState(vehicle);
+    if (state === 'stale') {
+      const minsAgo = Math.floor(
+        (Date.now() - new Date(vehicle.latestTelemetry!.timestamp).getTime()) / 60000,
+      );
+      marker.bindTooltip(`Last seen ${minsAgo} min ago`, { permanent: false });
+    } else {
+      marker.unbindTooltip();
     }
   }
 
   private getMarkerIcon(vehicle: VehicleWithHealth): L.DivIcon {
     const state = this.getVehicleState(vehicle);
     const colors: Record<string, string> = {
-      offline: '#6b7280',
-      running: '#22c55e',
-      alert: '#ef4444',
+      offline: '#5a4530',
+      running: '#84cc16',
+      alert: '#eab308',
+      stale: '#5a4530',
     };
-    const color = colors[state] ?? '#6b7280';
-    const pulse = state !== 'offline' ? 'pulse' : '';
+    const color = colors[state] ?? '#5a4530';
+    const opacity = state === 'stale' ? '0.5' : '1';
+    const pulse = (state === 'running' || state === 'alert') ? 'pulse' : '';
 
     return L.divIcon({
       html: `
-        <div class="map-marker map-marker--${state} ${pulse}" aria-hidden="true">
+        <div class="map-marker map-marker--${state} ${pulse}" style="opacity:${opacity}" aria-hidden="true">
           <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
             <circle cx="16" cy="16" r="12" fill="${color}" opacity="0.2"/>
             <circle cx="16" cy="16" r="7" fill="${color}"/>
@@ -177,7 +196,9 @@ export class FleetMapComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private getVehicleState(vehicle: VehicleWithHealth): 'offline' | 'running' | 'alert' {
+  private getVehicleState(vehicle: VehicleWithHealth): 'stale' | 'offline' | 'running' | 'alert' {
+    const ts = vehicle.latestTelemetry?.timestamp;
+    if (ts && Date.now() - new Date(ts).getTime() > 15 * 60 * 1000) return 'stale';
     if (vehicle.status === 'inactive') return 'offline';
     if (vehicle.alertCount > 0) return 'alert';
     if (vehicle.latestTelemetry?.engine_on) return 'running';
