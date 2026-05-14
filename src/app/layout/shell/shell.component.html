@@ -16,6 +16,15 @@
       (menuToggled)="toggleSidenav()"
     />
 
+    <div class="shell-connection-pill" style="
+      position: absolute;
+      top: 14px;
+      right: 140px;
+      z-index: 100;
+    ">
+      <vd-connection-pill [state]="connectionStatus()" />
+    </div>
+
     <app-alert-banner />
 
     <main id="main-content" class="shell-main">

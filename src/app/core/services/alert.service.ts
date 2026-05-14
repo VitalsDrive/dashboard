@@ -89,6 +89,27 @@ export class AlertService {
     this._alerts.set([]);
   }
 
+  /**
+   * Push a connection (or other fleet-level) alert into the toast stream.
+   * Uses vehicleId 'fleet' as a non-vehicle sentinel value.
+   * Auto-dismiss: 'warning' = 12000ms, 'info' = 8000ms (per ALERT_AUTO_DISMISS).
+   */
+  pushAlert(message: string, severity: AlertSeverity, type: AlertType = 'connection'): void {
+    this._alerts.update(alerts => {
+      const trimmed = alerts.length >= 200 ? alerts.slice(-199) : alerts;
+      const id = `alert-${Date.now()}-${++alertIdCounter}`;
+      return [...trimmed, {
+        id,
+        vehicleId: 'fleet',
+        type,
+        severity,
+        message,
+        timestamp: new Date(),
+        status: 'active' as AlertStatus,
+      }];
+    });
+  }
+
   // === Private helpers ===
 
   private checkCoolantAlert(telemetry: TelemetryRecord, vehicleName?: string): void {
